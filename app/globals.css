@@ -1432,7 +1432,7 @@ body {
 /* ─── FLOATING AUDIO DECK (SYNTHWAVE PLAYER) ─── */
 .cyber-floating-player {
   position: fixed;
-  bottom: 84px;
+  bottom: 24px;
   right: 24px;
   background: rgba(13, 16, 27, 0.9);
   backdrop-filter: blur(18px);
@@ -1630,7 +1630,7 @@ body {
 /* ─── INTERACTION HINT TOAST ─── */
 .cyber-hint-toast {
   position: fixed;
-  bottom: 80px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(13, 16, 27, 0.75);

@@ -716,35 +716,6 @@ export function Overlay(p: Props) {
         </div>
       )}
 
-      {/* ─── BOTTOM FLOATING CYBER DOCK (NAVIGATION) ─── */}
-      <nav className="cyber-bottom-dock" aria-label="Điều hướng nhanh">
-        <button
-          className={`dock-item overview ${!p.activeId ? 'active' : ''}`}
-          onClick={() => p.onClose()}
-          title="Toàn cảnh đường phố"
-        >
-          <span className="dock-icon">🌆</span>
-          <span className="dock-label">Toàn cảnh</span>
-        </button>
-
-        <div className="dock-divider" />
-
-        {NAV_SHORTCUTS.map((item) => {
-          const isActive = p.activeId === item.id
-          return (
-            <button
-              key={item.id}
-              className={`dock-item ${isActive ? 'active' : ''}`}
-              onClick={() => p.onSelect(item.id)}
-              title={`Khám phá ${item.label}`}
-            >
-              <span className="dock-icon">{item.icon}</span>
-              <span className="dock-label">{item.label}</span>
-              {isActive && <span className="active-dot" />}
-            </button>
-          )
-        })}
-      </nav>
 
       {/* ─── INTERACTION HINT TOAST ─── */}
       {hint && !loading && !p.activeId && (
