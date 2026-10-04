@@ -463,6 +463,15 @@ export function Overlay(p: Props) {
       )}
 
       {/* ─── RETRO TV / DESK MODE OVERLAY ─── */}
+      {current?.kind === 'music' && (
+        <div className="cyber-banner-mode">
+          <div className="banner-content">
+            <span className="banner-badge">RETRO MUSIC TV</span>
+            <span className="banner-text">Bấm vào màn hình TV giữa phố để đổi bài, chỉnh âm lượng hoặc dừng nhạc</span>
+          </div>
+          <button className="cyber-btn highlight" onClick={p.onClose}>Thoát góc nhìn · ESC</button>
+        </div>
+      )}
 
       {current?.kind === 'desk' && (
         <div className="cyber-banner-mode">
@@ -479,7 +488,7 @@ export function Overlay(p: Props) {
         <aside className="cyber-panel" key={current.id}>
           {/* Animated Gradient Neon Bar */}
           <div className="panel-glow-line" />
-          
+
           <div className="panel-hud-header">
             <div className="panel-module-tag">
               <span className="tag-bracket">[</span>
@@ -655,45 +664,6 @@ export function Overlay(p: Props) {
                 </div>
               </div>
             )}
-
-            {/* Special Music Panel */}
-            {current.id === 'music' && (
-              <div className="cyber-music-panel-box">
-                <div className="music-now-card">
-                  <div className="now-meta-col">
-                    <span className="now-badge">WEB AUDIO SYNTH // {TRACKS[m.index].mood.toUpperCase()}</span>
-                    <strong className="now-song-title">{TRACKS[m.index].title}</strong>
-                    <span className="now-song-sub">{TRACKS[m.index].artist}</span>
-                  </div>
-                  <AudioWaveVisualizer count={10} active={m.playing} />
-                </div>
-
-                <div className="music-panel-actions">
-                  <button className="cyber-btn small" onClick={() => music.prev()}>⏮ Bài trước</button>
-                  <button className="cyber-cta-btn" onClick={() => music.toggle()}>
-                    {m.playing ? '❚❚ Tạm dừng' : '▶ Phát nhạc'}
-                  </button>
-                  <button className="cyber-btn small" onClick={() => music.next()}>Bài sau ⏭</button>
-                </div>
-
-                <div className="music-track-list">
-                  {TRACKS.map((t, i) => (
-                    <button
-                      key={t.id}
-                      className={`track-select-row ${m.index === i ? 'active' : ''}`}
-                      onClick={() => music.play(i)}
-                    >
-                      <span className="tr-num">{m.index === i && m.playing ? '♪' : i + 1}</span>
-                      <div className="tr-info">
-                        <strong>{t.title}</strong>
-                        <span>{t.artist}</span>
-                      </div>
-                      <span className="tr-mood">{t.mood}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Panel Actions / Navigation Bar */}
@@ -726,7 +696,7 @@ export function Overlay(p: Props) {
           >
             <span className="vinyl-disc spinning" />
           </button>
-          
+
           <div className="player-track-meta">
             <div className="track-title-row">
               <span className="now-playing-dot" />

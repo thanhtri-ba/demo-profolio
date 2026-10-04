@@ -15,6 +15,7 @@ import { Drones } from './Drones'
 import { Searchlight } from './Searchlight'
 import { Steam } from './Steam'
 import { MusicZone } from './MusicZone'
+import { TVPlayer } from './TVPlayer'
 import { Desk } from './Desk'
 import { PCSetup } from './PCSetup'
 import { music } from '@/lib/music'
@@ -37,6 +38,9 @@ const POOLS: [number, number, string][] = [
 ]
 // khu nghe nhạc: giữa đoạn đường phía bên trái (đo từ ảnh nhìn từ trên xuống)
 const MUSIC_POS: [number, number, number] = [-0.31, 0.014, -0.1]
+// TV phát nhạc: góc mới trong khoảng đen bên trái phố, quay mặt về phía phố
+const TV_POS: [number, number, number] = [-1.2, 0.255, -0.25]
+const TV_YAW = 0.95
 // bàn máy tính ở góc đen bên phải (mặt bàn cao 0.4 so với sàn) + PC mini trên đường làm cổng vào
 const DESK_POS: [number, number, number] = [2.9, 0.4, -0.6]
 const DESK_YAW = -1.0
@@ -135,6 +139,7 @@ export default function NeonStreet() {
           {lite !== null && <Street lite={lite} reflect={high} />}
           <Signs signs={SIGNS} activeId={activeId} onSelect={onSelect} />
           <MusicZone position={MUSIC_POS} onSelect={() => onSelect('music')} />
+          <TVPlayer position={TV_POS} yaw={TV_YAW} active={activeId === 'music'} onActivate={() => onSelect('music')} />
           <Desk position={DESK_POS} yaw={DESK_YAW} active={activeId === 'desk'} onActivate={() => onSelect('desk')} />
           <PCSetup position={PC_POS} yaw={PC_YAW} onSelect={() => onSelect('desk')} />
           <LightPools sources={POOLS} />

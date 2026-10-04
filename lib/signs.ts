@@ -144,14 +144,10 @@ export const SIGNS: Sign[] = [
     },
   },
   {
-    id: 'music', label: 'Âm nhạc', kind: 'music', nav: true,
-    pos: [-0.31, 0.014, -0.1], yaw: 0, size: [0.36, 0.36], glow: '#ff3fd0',
-    view: { dist: 0.72, yawOffset: 0.35, lift: 0.28, shift: 0 },
-    content: {
-      title: 'Khu Âm Nhạc Synthwave',
-      body: 'Sàn biểu diễn 3D với 16 cột Equalizer nhảy theo nhịp điệu bài hát sinh ra thời gian thực qua Web Audio API, đĩa than vinyl xoay lơ lửng và vệt sáng phản chiếu mặt đường.',
-      tags: ['WebAudio API', 'Step Sequencer', 'Audio Analyser', '3D Equalizer'],
-    },
+    id: 'music', label: 'Music', kind: 'music', nav: true,
+    // TV phát nhạc ở "góc mới" bên trái phố (xem TV_POS/TV_YAW trong NeonStreet)
+    pos: [-1.2, 0.255, -0.25], yaw: 0.95, size: [0.5, 0.31], glow: '#ff3fd0',
+    view: { dist: 0.88, yawOffset: 0, lift: 0.005, shift: 0 },
   },
   {
     id: 'desk', label: 'My Desk', kind: 'desk', nav: true,

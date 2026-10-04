@@ -249,9 +249,8 @@ export function Desk({ position, yaw, active, onActivate }: {
       const stepT = Math.max(0.065, 0.13 - g.score * 0.003)
       while (g.acc > stepT && g.state === 'play') { g.acc -= stepT; stepGame(g) }
     }
-    frame.current++
-    const near = active || camera.position.distanceTo(posVec) < 2.6
-    if (root.current) root.current.visible = near
+    const near = active
+    if (root.current) root.current.visible = active
     const every = active ? 2 : near ? 6 : 30
     if (frame.current % every === 0) {
       let c = code.canvas.getContext('2d')!
