@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useSyncExternalStore, useCallback, useRef } from 'react'
+import { useEffect, useState, useSyncExternalStore, useCallback, useRef, useMemo } from 'react'
 import { useProgress } from '@react-three/drei'
 import type { Sign } from '@/lib/signs'
 import { music, TRACKS } from '@/lib/music'
@@ -21,28 +21,84 @@ type Props = {
   setQuality: (q: 'high' | 'low') => void
 }
 
+type ThemeMode = 'cyber' | 'matrix' | 'amber' | 'synthwave'
+
 function useMusic() {
   return useSyncExternalStore(music.subscribe, music.getSnapshot, music.getSnapshot)
 }
 
 const NAV_SHORTCUTS = [
-  { id: 'projects', label: 'Dự án', icon: '🚀' },
-  { id: 'about', label: 'Giới thiệu', icon: '👤' },
-  { id: 'skills', label: 'Kỹ năng', icon: '⚡' },
-  { id: 'experience', label: 'Kinh nghiệm', icon: '💼' },
-  { id: 'music', label: 'Music TV', icon: '🎵' },
-  { id: 'desk', label: 'Góc Dev', icon: '🕹️' },
-  { id: 'contact', label: 'Liên hệ', icon: '📬' },
+  { id: 'projects', label: 'Dự án', icon: '🚀', tag: 'PROJ' },
+  { id: 'about', label: 'Hồ sơ', icon: '👤', tag: 'BIO' },
+  { id: 'skills', label: 'Kỹ năng', icon: '⚡', tag: 'TECH' },
+  { id: 'experience', label: 'Kinh nghiệm', icon: '💼', tag: 'EXP' },
+  { id: 'music', label: 'Music TV', icon: '🎵', tag: 'AUDIO' },
+  { id: 'desk', label: 'Góc Dev', icon: '🕹️', tag: 'LAB' },
+  { id: 'contact', label: 'Liên hệ', icon: '📬', tag: 'PING' },
 ]
+
+/** Real-time animated audio spectrum visualizer using music.levels */
+function AudioWaveVisualizer({ count = 10, active = false }: { count?: number; active?: boolean }) {
+  const [bars, setBars] = useState<number[]>(() => Array(count).fill(0.1))
+
+  useEffect(() => {
+    let frameId: number
+    const update = () => {
+      if (active) {
+        const lv = music.levels(count)
+        setBars(Array.from(lv))
+      } else {
+        setBars(Array(count).fill(0.08))
+      }
+      frameId = requestAnimationFrame(update)
+    }
+    frameId = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(frameId)
+  }, [active, count])
+
+  return (
+    <div className="audio-wave-visualizer" aria-hidden="true">
+      {bars.map((v, i) => (
+        <span
+          key={i}
+          className="wave-bar"
+          style={{ height: `${Math.max(12, Math.min(100, Math.round(v * 100)))}%` }}
+        />
+      ))}
+    </div>
+  )
+}
 
 export function Overlay(p: Props) {
   const { progress, active: loading } = useProgress()
   const current = p.signs.find((s) => s.id === p.activeId)
   const [envOpen, setEnvOpen] = useState(false)
+  const [cmdOpen, setCmdOpen] = useState(false)
   const [hint, setHint] = useState(true)
   const [copied, setCopied] = useState(false)
   const [isTouring, setIsTouring] = useState(false)
+  const [theme, setTheme] = useState<ThemeMode>('cyber')
+  const [crtEffect, setCrtEffect] = useState(false)
+  const [projectFilter, setProjectFilter] = useState<'all' | '3d' | 'fullstack' | 'ai'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [clock, setClock] = useState('')
   const m = useMusic()
+
+  // Real-time Cyber Clock
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date()
+      setClock(now.toLocaleTimeString('vi-VN', { hour12: false }))
+    }
+    updateClock()
+    const timer = setInterval(updateClock, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Apply Theme attribute to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   // Navigation order for prev / next
   const navigableSigns = useRef(p.signs.filter((s) => s.nav || s.id === 'music' || s.id === 'desk')).current
@@ -75,7 +131,7 @@ export function Overlay(p: Props) {
     return () => clearInterval(interval)
   }, [isTouring, navigableSigns, p])
 
-  // Hide hints after initial interaction or 8s
+  // Hide hints after initial interaction
   useEffect(() => {
     const hide = () => setHint(false)
     const t = setTimeout(hide, 8000)
@@ -86,32 +142,67 @@ export function Overlay(p: Props) {
     }
   }, [])
 
+  // Keyboard Shortcuts: Command+K for search, Esc to close, Arrows to navigate
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCmdOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   const copyEmail = () => {
     navigator.clipboard.writeText(PROFILE.email)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Filtered projects
+  const filteredProjects = useMemo(() => {
+    return PROFILE.projects.filter((proj) => {
+      if (projectFilter === 'all') return true
+      return proj.category === projectFilter
+    })
+  }, [projectFilter])
+
+  // Filtered searchable items for Command Palette
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return NAV_SHORTCUTS
+    const q = searchQuery.toLowerCase()
+    return NAV_SHORTCUTS.filter(
+      (s) => s.label.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)
+    )
+  }, [searchQuery])
+
+  // Current Sector Tag
+  const sectorTag = current ? `SECTOR // 0${currentIndex + 1}-${current.id.toUpperCase()}` : 'SECTOR // 00-NEON-HUB'
+
   return (
     <>
+      {/* ─── OPTIONAL RETRO CRT OVERLAY ─── */}
+      {crtEffect && <div className="crt-overlay" aria-hidden="true" />}
+
       {/* ─── LOADING SCREEN ─── */}
       <div className={`cyber-loader ${loading ? '' : 'done'}`}>
         <div className="loader-hud">
           <div className="loader-glitch" data-text="NEON STREET 3D">
             NEON STREET 3D
           </div>
-          <div className="loader-sub">SYSTEM INITIALIZING // WEBGL 2.0</div>
+          <div className="loader-sub">PHẠM THÀNH TRÍ // CREATIVE PORTFOLIO</div>
           <div className="loader-bar-wrap">
             <div className="loader-bar" style={{ width: `${progress}%` }} />
           </div>
           <div className="loader-meta">
-            <span>LOADING ASSETS & SHADERS</span>
+            <span>WEBGL 2.0 & PROCEDURAL AUDIO</span>
             <span className="loader-percent">{Math.round(progress)}%</span>
           </div>
         </div>
       </div>
 
-      {/* ─── SCI-FI CORNER RETICLES ─── */}
+      {/* ─── SCI-FI RETICLE CORNERS ─── */}
       <div className="cyber-frame-corner top-left" aria-hidden="true" />
       <div className="cyber-frame-corner top-right" aria-hidden="true" />
       <div className="cyber-frame-corner bottom-left" aria-hidden="true" />
@@ -122,17 +213,34 @@ export function Overlay(p: Props) {
         <div className="brand-group">
           <button className="brand-badge" onClick={() => p.onClose()} title="Về toàn cảnh phố">
             <span className="brand-glow-dot" />
-            <span className="brand-title">THANHTRI.DEV</span>
-            <span className="brand-tag">PORTFOLIO 3D</span>
+            <div className="brand-text-col">
+              <span className="brand-title">THANHTRI.DEV</span>
+              <span className="brand-tag">PORTFOLIO // v2.6</span>
+            </div>
           </button>
+
+          {/* Tactical Telemetry Badge */}
           <div className="brand-status">
             <span className="status-live">● ONLINE</span>
             <span className="status-divider">|</span>
-            <span className="status-info">{p.time.toUpperCase()} · {p.weather.toUpperCase()}</span>
+            <span className="status-sector">{sectorTag}</span>
+            <span className="status-divider">|</span>
+            <span className="status-clock">{clock || '22:00:00'} ICT</span>
           </div>
         </div>
 
         <div className="header-actions">
+          {/* Quick Search / Command Palette */}
+          <button
+            className="cyber-btn search-trigger-btn"
+            onClick={() => setCmdOpen(true)}
+            title="Mở menu tìm kiếm nhanh (Ctrl+K / ⌘K)"
+          >
+            <span className="btn-icon">🔍</span>
+            <span className="btn-text">TÌM KIẾM</span>
+            <kbd className="cyber-kbd">⌘K</kbd>
+          </button>
+
           {/* Tour Mode */}
           <button
             className={`cyber-btn tour-btn ${isTouring ? 'active' : ''}`}
@@ -143,32 +251,28 @@ export function Overlay(p: Props) {
             <span className="btn-text">{isTouring ? 'DỪNG TOUR' : 'AUTO TOUR'}</span>
           </button>
 
-          {/* Sound Toggle */}
+          {/* Audio Synthesizer Toggle with Real-time Spectrum */}
           <button
             className={`cyber-btn audio-btn ${p.sound ? 'active' : ''}`}
             onClick={p.toggleSound}
-            title={p.sound ? 'Tắt âm thanh' : 'Bật âm thanh synth & mưa'}
+            title={p.sound ? 'Tắt âm thanh môi trường' : 'Bật âm thanh WebAudio synth & mưa'}
           >
-            <span className="eq-icon" aria-hidden="true">
-              <i className={p.sound ? 'wave' : ''} />
-              <i className={p.sound ? 'wave delay-1' : ''} />
-              <i className={p.sound ? 'wave delay-2' : ''} />
-            </span>
+            <AudioWaveVisualizer count={5} active={p.sound} />
             <span className="btn-text">{p.sound ? 'AUDIO: ON' : 'AUDIO: OFF'}</span>
           </button>
 
-          {/* Environment HUD Button */}
+          {/* Environment & Theme Settings HUD */}
           <button
             className={`cyber-btn env-btn ${envOpen ? 'active' : ''}`}
             onClick={() => setEnvOpen(!envOpen)}
             aria-expanded={envOpen}
-            title="Tuỳ chỉnh thời gian, thời tiết và đồ họa"
+            title="Tuỳ chỉnh màu neon, thời gian, thời tiết và đồ họa"
           >
             <span className="btn-icon">⚙</span>
-            <span className="btn-text">CẢNH QUAN</span>
+            <span className="btn-text">KHÔNG GIAN</span>
           </button>
 
-          {/* Social Quick Links */}
+          {/* GitHub Link */}
           <a
             href={PROFILE.github}
             target="_blank"
@@ -183,23 +287,102 @@ export function Overlay(p: Props) {
         </div>
       </header>
 
-      {/* ─── ENVIRONMENT CONTROL DRAWER ─── */}
+      {/* ─── COMMAND PALETTE MODAL (⌘K) ─── */}
+      {cmdOpen && (
+        <div className="cyber-modal-backdrop" onClick={() => setCmdOpen(false)}>
+          <div className="cyber-command-palette" onClick={(e) => e.stopPropagation()}>
+            <div className="cmd-header">
+              <span className="cmd-search-icon">🔍</span>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Tìm dự án, kỹ năng, hoặc nhảy đến địa điểm... (Esc để đóng)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="cmd-input"
+              />
+              <button className="cmd-close" onClick={() => setCmdOpen(false)}>✕</button>
+            </div>
+            <div className="cmd-list">
+              <div className="cmd-group-label">ĐỊA ĐIỂM TRÊN PHỐ 3D</div>
+              {searchResults.map((item) => (
+                <button
+                  key={item.id}
+                  className="cmd-item"
+                  onClick={() => {
+                    p.onSelect(item.id)
+                    setCmdOpen(false)
+                  }}
+                >
+                  <span className="cmd-item-icon">{item.icon}</span>
+                  <span className="cmd-item-title">{item.label}</span>
+                  <span className="cmd-item-tag">{item.tag}</span>
+                  <span className="cmd-item-arrow">Bay tới ↗</span>
+                </button>
+              ))}
+            </div>
+            <div className="cmd-footer">
+              <span>Phím tắt: <strong>Esc</strong> để thoát · <strong>↑ ↓</strong> chọn · <strong>Enter</strong> thực thi</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ENVIRONMENT & THEME CONTROL DRAWER ─── */}
       {envOpen && (
         <div className="cyber-modal-backdrop" onClick={() => setEnvOpen(false)}>
           <div className="cyber-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="drawer-header">
               <div className="drawer-title">
                 <span className="accent-bar" />
-                <span>ĐIỀU KHIỂN KHÔNG GIAN 3D</span>
+                <span>TRÌNH ĐIỀU HÀNH KHÔNG GIAN 3D</span>
               </div>
               <button className="drawer-close" onClick={() => setEnvOpen(false)}>✕</button>
             </div>
 
             <div className="drawer-body">
+              {/* Chủ đề màu Neon */}
+              <div className="control-section">
+                <label className="control-label">
+                  <span>MÀU SẮC NEON (THEME)</span>
+                  <em>{theme.toUpperCase()}</em>
+                </label>
+                <div className="theme-selector-grid">
+                  <button
+                    className={`theme-chip-btn cyber ${theme === 'cyber' ? 'active' : ''}`}
+                    onClick={() => setTheme('cyber')}
+                  >
+                    <span className="chip-preview cyan-magenta" />
+                    <span>Neo-Tokyo</span>
+                  </button>
+                  <button
+                    className={`theme-chip-btn matrix ${theme === 'matrix' ? 'active' : ''}`}
+                    onClick={() => setTheme('matrix')}
+                  >
+                    <span className="chip-preview green" />
+                    <span>Matrix</span>
+                  </button>
+                  <button
+                    className={`theme-chip-btn amber ${theme === 'amber' ? 'active' : ''}`}
+                    onClick={() => setTheme('amber')}
+                  >
+                    <span className="chip-preview gold" />
+                    <span>Blade 2049</span>
+                  </button>
+                  <button
+                    className={`theme-chip-btn synthwave ${theme === 'synthwave' ? 'active' : ''}`}
+                    onClick={() => setTheme('synthwave')}
+                  >
+                    <span className="chip-preview purple" />
+                    <span>Synthwave</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Thời gian */}
               <div className="control-section">
                 <label className="control-label">
-                  <span>THỜI GIAN TRONG NGÀY</span>
+                  <span>CHU KỲ THỜI GIAN</span>
                   <em>{TIME_LABELS[p.time]}</em>
                 </label>
                 <div className="cyber-pill-group">
@@ -241,15 +424,15 @@ export function Overlay(p: Props) {
                 </div>
               </div>
 
-              {/* Âm thanh & Đồ họa */}
+              {/* Hiệu ứng CRT Screen & Đồ họa */}
               <div className="control-grid-two">
                 <div className="control-section">
-                  <label className="control-label"><span>ÂM THANH</span></label>
+                  <label className="control-label"><span>MÀN HÌNH CRT</span></label>
                   <button
-                    className={`cyber-toggle-btn ${p.sound ? 'active' : ''}`}
-                    onClick={p.toggleSound}
+                    className={`cyber-toggle-btn ${crtEffect ? 'active' : ''}`}
+                    onClick={() => setCrtEffect(!crtEffect)}
                   >
-                    {p.sound ? '🔊 Đang bật' : '🔇 Đã tắt'}
+                    {crtEffect ? '📺 Đang bật' : '📺 Đã tắt'}
                   </button>
                 </div>
                 <div className="control-section">
@@ -273,7 +456,7 @@ export function Overlay(p: Props) {
             </div>
 
             <div className="drawer-footer">
-              <span className="footer-hint">Tự động điều chỉnh hiệu năng theo FPS thiết bị</span>
+              <span className="footer-hint">Next.js 16 · Turbopack · React Three Fiber · WebGL 2.0</span>
             </div>
           </div>
         </div>
@@ -284,7 +467,7 @@ export function Overlay(p: Props) {
         <div className="cyber-banner-mode">
           <div className="banner-content">
             <span className="banner-badge">RETRO MUSIC TV</span>
-            <span className="banner-text">Bấm vào màn hình TV trong phố để chuyển bài và chỉnh âm lượng</span>
+            <span className="banner-text">Bấm vào màn hình TV giữa phố để đổi bài, chỉnh âm lượng hoặc dừng nhạc</span>
           </div>
           <button className="cyber-btn highlight" onClick={p.onClose}>Thoát góc nhìn · ESC</button>
         </div>
@@ -303,12 +486,13 @@ export function Overlay(p: Props) {
       {/* ─── CYBER CONTENT PANEL (HOLOGRAPHIC MODAL) ─── */}
       {current?.content && (
         <aside className="cyber-panel" key={current.id}>
-          {/* Panel Top Decorative Bar */}
+          {/* Animated Gradient Neon Bar */}
           <div className="panel-glow-line" />
+          
           <div className="panel-hud-header">
             <div className="panel-module-tag">
               <span className="tag-bracket">[</span>
-              <span className="tag-name">MODULE // {current.label.toUpperCase()}</span>
+              <span className="tag-name">SYSTEM // {current.label.toUpperCase()}</span>
               <span className="tag-bracket">]</span>
             </div>
             <button className="panel-close-btn" onClick={p.onClose} title="Đóng panel (Esc)">✕</button>
@@ -318,36 +502,128 @@ export function Overlay(p: Props) {
             <h2 className="panel-title">{current.content.title}</h2>
             {current.content.body && <p className="panel-description">{current.content.body}</p>}
 
-            {/* Tags / Badges */}
-            {current.content.tags && (
-              <div className="panel-tags-wrap">
-                {current.content.tags.map((t) => (
-                  <span key={t} className="cyber-tag">{t}</span>
-                ))}
-              </div>
-            )}
-
-            {/* Special Skills View */}
-            {current.id === 'skills' && (
-              <div className="cyber-skills-container">
-                {Object.entries(PROFILE.skills).map(([category, list]) => (
-                  <div key={category} className="skill-cat-card">
-                    <div className="skill-cat-title">
-                      <span className="cat-dot" />
-                      <span>{category}</span>
-                    </div>
-                    <div className="skill-cat-chips">
-                      {list.map((skill) => (
-                        <span key={skill} className="skill-chip">{skill}</span>
-                      ))}
-                    </div>
+            {/* Special ABOUT ME Dossier View */}
+            {current.id === 'about' && (
+              <div className="cyber-dossier-card">
+                <div className="dossier-header">
+                  <div className="dossier-avatar-placeholder">
+                    <span>TT</span>
                   </div>
-                ))}
+                  <div className="dossier-meta">
+                    <strong className="dossier-name">{PROFILE.name}</strong>
+                    <span className="dossier-role">{PROFILE.role}</span>
+                    <span className="dossier-status">● {PROFILE.status}</span>
+                  </div>
+                </div>
+                <div className="dossier-facts">
+                  <div className="fact-item">
+                    <span className="fact-label">KHU VỰC</span>
+                    <span className="fact-val">{PROFILE.location}</span>
+                  </div>
+                  <div className="fact-item">
+                    <span className="fact-label">CHUYÊN MÔN</span>
+                    <span className="fact-val">3D Web & Fullstack</span>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Standard Items (Projects, Experience, Blog) */}
-            {current.id !== 'skills' && current.content.items && (
+            {/* Special SKILLS with Animated Progress Mastery Meters */}
+            {current.id === 'skills' && (
+              <div className="cyber-skills-wrapper">
+                <div className="mastery-section">
+                  <div className="sub-section-title">CHỈ SỐ THÀNH THẠO KỸ NĂNG</div>
+                  <div className="mastery-grid">
+                    {PROFILE.mastery.map((item) => (
+                      <div key={item.name} className="mastery-item">
+                        <div className="mastery-info">
+                          <span className="mastery-name">{item.name}</span>
+                          <span className="mastery-pct">{item.level}%</span>
+                        </div>
+                        <div className="mastery-bar-track">
+                          <div className="mastery-bar-fill" style={{ width: `${item.level}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sub-section-title">DANH MỤC CÔNG NGHỆ</div>
+                <div className="cyber-skills-container">
+                  {Object.entries(PROFILE.skills).map(([category, list]) => (
+                    <div key={category} className="skill-cat-card">
+                      <div className="skill-cat-title">
+                        <span className="cat-dot" />
+                        <span>{category}</span>
+                      </div>
+                      <div className="skill-cat-chips">
+                        {list.map((skill) => (
+                          <span key={skill} className="skill-chip">{skill}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Special PROJECTS with Category Tabs */}
+            {current.id === 'projects' && (
+              <div className="projects-view-wrap">
+                <div className="cyber-tabs-row">
+                  <button
+                    className={`tab-btn ${projectFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setProjectFilter('all')}
+                  >
+                    Tất cả ({PROFILE.projects.length})
+                  </button>
+                  <button
+                    className={`tab-btn ${projectFilter === '3d' ? 'active' : ''}`}
+                    onClick={() => setProjectFilter('3d')}
+                  >
+                    3D & WebGL
+                  </button>
+                  <button
+                    className={`tab-btn ${projectFilter === 'fullstack' ? 'active' : ''}`}
+                    onClick={() => setProjectFilter('fullstack')}
+                  >
+                    Full-Stack
+                  </button>
+                  <button
+                    className={`tab-btn ${projectFilter === 'ai' ? 'active' : ''}`}
+                    onClick={() => setProjectFilter('ai')}
+                  >
+                    AI / LLM
+                  </button>
+                </div>
+
+                <div className="cyber-items-list">
+                  {filteredProjects.map((it) => (
+                    <div key={it.title} className="cyber-item-card project-card">
+                      <div className="item-card-top">
+                        <div className="project-title-group">
+                          {it.badge && <span className="project-badge">{it.badge}</span>}
+                          <strong className="item-title">
+                            {it.href ? (
+                              <a href={it.href} target="_blank" rel="noreferrer" className="item-link">
+                                {it.title} <span className="arrow">↗</span>
+                              </a>
+                            ) : (
+                              it.title
+                            )}
+                          </strong>
+                        </div>
+                        {it.meta && <span className="item-meta">{it.meta}</span>}
+                      </div>
+                      {it.desc && <p className="item-desc">{it.desc}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Standard Items (Experience, Blog) */}
+            {current.id !== 'skills' && current.id !== 'projects' && current.content.items && (
               <div className="cyber-items-list">
                 {current.content.items.map((it) => (
                   <div key={it.title} className="cyber-item-card">
@@ -369,7 +645,7 @@ export function Overlay(p: Props) {
               </div>
             )}
 
-            {/* Quick Contact Buttons if on Contact */}
+            {/* Special Contact Panel */}
             {current.id === 'contact' && (
               <div className="contact-quick-box">
                 <div className="email-display">
@@ -377,6 +653,14 @@ export function Overlay(p: Props) {
                   <button className="copy-btn" onClick={copyEmail}>
                     {copied ? '✓ Đã sao chép' : '📋 Sao chép'}
                   </button>
+                </div>
+                <div className="social-links-grid">
+                  <a href={PROFILE.github} target="_blank" rel="noreferrer" className="social-chip">
+                    <span>🐙 GitHub: thanhtri-ba</span>
+                  </a>
+                  <a href={`mailto:${PROFILE.email}`} className="social-chip email">
+                    <span>✉ Gửi Email Trực Tiếp</span>
+                  </a>
                 </div>
               </div>
             )}
@@ -402,9 +686,9 @@ export function Overlay(p: Props) {
         </aside>
       )}
 
-      {/* ─── FLOATING CYBER SYNTH MINI PLAYER ─── */}
+      {/* ─── FLOATING AUDIO DECK (SYNTHWAVE PLAYER) ─── */}
       {m.playing && current?.kind !== 'music' && (
-        <div className="cyber-floating-player" role="group" aria-label="Cyber Player">
+        <div className="cyber-floating-player" role="group" aria-label="Cyber Sound Deck">
           <button
             className="player-disc-btn"
             onClick={() => p.onSelect('music')}
@@ -412,13 +696,18 @@ export function Overlay(p: Props) {
           >
             <span className="vinyl-disc spinning" />
           </button>
+          
           <div className="player-track-meta">
             <div className="track-title-row">
               <span className="now-playing-dot" />
               <strong className="track-name">{TRACKS[m.index].title}</strong>
             </div>
-            <span className="track-artist">{TRACKS[m.index].artist}</span>
+            <div className="track-sub-row">
+              <span className="track-artist">{TRACKS[m.index].artist}</span>
+              <AudioWaveVisualizer count={6} active={m.playing} />
+            </div>
           </div>
+
           <div className="player-controls">
             <button className="ctrl-btn" onClick={() => music.prev()} title="Bài trước">⏮</button>
             <button className="ctrl-btn play-pause" onClick={() => music.pause()} title="Tạm dừng">❚❚</button>
@@ -457,7 +746,7 @@ export function Overlay(p: Props) {
         })}
       </nav>
 
-      {/* ─── INTERACTION HINT ─── */}
+      {/* ─── INTERACTION HINT TOAST ─── */}
       {hint && !loading && !p.activeId && (
         <div className="cyber-hint-toast" aria-hidden="true">
           <span className="hint-pulse" />
