@@ -207,30 +207,39 @@ export function drawIcon(canvas: HTMLCanvasElement, kind: 'youtube' | 'linkedin'
     ctx.closePath()
     ctx.fill()
   } else if (kind === 'github') {
-    // mèo GitHub (đơn giản hoá): đầu tròn + 2 tai + 2 mắt
-    const R = Math.min(W, H) * 0.27, cx = W / 2, cy = H * 0.54
-    ctx.beginPath()
-    ctx.arc(cx, cy, R, 0, Math.PI * 2)
-    ctx.fill()
-    for (const sx of [-1, 1]) {
-      ctx.beginPath()
-      ctx.moveTo(cx + sx * R * 0.98, cy - R * 0.1)
-      ctx.lineTo(cx + sx * R * 0.82, cy - R * 1.12)
-      ctx.lineTo(cx + sx * R * 0.18, cy - R * 0.92)
-      ctx.closePath()
-      ctx.fill()
+    // Logo GitHub Octocat chuẩn chính thức (Invertocat)
+    const size = Math.min(W, H) * 0.65
+    const off = document.createElement('canvas')
+    off.width = W
+    off.height = H
+    const octx = off.getContext('2d')
+    if (octx) {
+      const radius = size * 0.5
+      // 1. Vẽ hình tròn trắng
+      octx.fillStyle = '#ffffff'
+      octx.beginPath()
+      octx.arc(W / 2, H / 2, radius, 0, Math.PI * 2)
+      octx.fill()
+
+      // 2. Dùng đường path chính thức của GitHub để cắt thành hình Octocat chuẩn
+      octx.save()
+      octx.globalCompositeOperation = 'destination-out'
+      octx.translate(W / 2 - radius, H / 2 - radius)
+      octx.scale(size / 24, size / 24)
+      const p = new Path2D(
+        'M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z'
+      )
+      octx.fill(p)
+      octx.restore()
+
+      // 3. Vẽ lên canvas chính kèm hiệu ứng ánh sáng neon
+      ctx.save()
+      ctx.shadowColor = '#ffffff'
+      ctx.shadowBlur = Math.min(W, H) * 0.12
+      ctx.drawImage(off, 0, 0)
+      ctx.drawImage(off, 0, 0) // double draw for vibrant glow
+      ctx.restore()
     }
-    ctx.shadowBlur = 0
-    ctx.shadowOffsetY = 0
-    ctx.fillStyle = '#12161b'
-    for (const sx of [-1, 1]) {
-      ctx.beginPath()
-      ctx.ellipse(cx + sx * R * 0.36, cy - R * 0.05, R * 0.12, R * 0.17, 0, 0, Math.PI * 2)
-      ctx.fill()
-    }
-    ctx.beginPath()
-    ctx.arc(cx, cy + R * 0.42, R * 0.2, 0, Math.PI, false)
-    ctx.fill()
   } else {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'

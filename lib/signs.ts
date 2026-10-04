@@ -157,7 +157,7 @@ export const SIGNS: Sign[] = [
   },
   { id: 'youtube', label: 'YouTube', icon: 'youtube', glow: '#ff3b3b', pos: [-0.3628, 0.275, 0.4431], yaw: -0.83, size: [0.064, 0.045], href: 'https://youtube.com' },
   { id: 'linkedin', label: 'LinkedIn', icon: 'linkedin', glow: '#2fb8ff', pos: [-0.3593, 0.215, 0.4373], yaw: -0.83, size: [0.045, 0.045], href: P.linkedin },
-  { id: 'github', label: 'GitHub', icon: 'github', glow: '#9aa4b2', pos: [-0.3557, 0.155, 0.4315], yaw: -0.83, size: [0.045, 0.045], href: P.github },
+  { id: 'github', label: 'GitHub', icon: 'github', glow: '#ffffff', pos: [-0.3557, 0.155, 0.4315], yaw: -0.83, size: [0.045, 0.045], href: P.github },
 ]
 
 /* ---------- Camera ---------- */
