@@ -651,29 +651,6 @@ export function Desk({
         </group>
       </group>
 
-      {/* ─── GỐI TỰA CỔ CHỮ U CÓ ĐÔI TAI MÈO & DÂY RÚT (CHUẨN ẢNH 2) ─── */}
-      <group position={[-0.28, 0.09, 0.14]} rotation-y={0.25} rotation-z={-0.12} raycast={() => null}>
-        <mesh>
-          <torusGeometry args={[0.076, 0.034, 20, 32, Math.PI * 1.4]} />
-          <meshStandardMaterial color="#cbd5e1" roughness={0.9} />
-        </mesh>
-        {/* Đôi tai mèo trên gối */}
-        {[-0.04, 0.04].map((tx) => (
-          <mesh key={tx} position={[tx, 0.085, 0]} rotation-z={tx < 0 ? 0.3 : -0.3}>
-            <coneGeometry args={[0.016, 0.032, 4]} />
-            <meshStandardMaterial color="#94a3b8" roughness={0.9} />
-          </mesh>
-        ))}
-        {/* Dây rút gối có chốt bấm */}
-        <mesh position={[0, -0.05, 0.02]}>
-          <cylinderGeometry args={[0.003, 0.003, 0.06, 8]} />
-          <meshStandardMaterial color="#64748b" />
-        </mesh>
-        <mesh position={[0, -0.06, 0.02]}>
-          <boxGeometry args={[0.014, 0.012, 0.012]} />
-          <meshStandardMaterial color="#1e293b" />
-        </mesh>
-      </group>
 
       {/* ─── BÀN PHÍM CƠ NẰM NGHIÊNG BÊN TRÁI (CHUẨN ẢNH 2) ─── */}
       <group position={[-0.42, 0.016, 0.32]} rotation-y={0.2} rotation-x={-0.08} raycast={() => null}>
