@@ -1,15 +1,14 @@
 'use client'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import { PROFILE } from '@/lib/profile'
 import { live } from '@/lib/mood'
 import { glowTexture } from '@/lib/textures'
-import { music, TRACKS } from '@/lib/music'
 
-const FONT = '"Plus Jakarta Sans", "Helvetica Neue", Arial, sans-serif'
-const MONO = '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace'
+const FONT = '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif'
+const MONO = '"JetBrains Mono", monospace'
 
 type Hit = { id: string; x: number; y: number; w: number; h: number; run: () => void }
 
@@ -33,961 +32,394 @@ function makeScreen(w: number, h: number) {
   return { canvas, tex, w, h }
 }
 
-type AppId = 'vscode' | 'projects' | 'terminal' | 'snake' | 'music' | 'cv'
-type CodeTab = 'profile' | 'skills' | 'contact'
-
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. MÀN HÌNH CHÍNH (GIỮA): HỆ ĐIỀU HÀNH CYBER-OS HOÀN CHỈNH
+// 1. VẼ HÌNH NỀN THIÊN NHIÊN: TRĂNG KHỔNG LỒ & RỪNG THÔNG (GIỐNG ẢNH 2)
 // ─────────────────────────────────────────────────────────────────────────────
-const DESKTOP_APPS: { id: AppId; name: string; icon: string; desc: string; badgeColor: string }[] = [
-  { id: 'vscode', name: 'VS Code', icon: '📝', desc: 'Trình soạn thảo mã nguồn', badgeColor: '#00f5d4' },
-  { id: 'projects', name: 'Projects', icon: '📁', desc: 'Trình duyệt dự án web', badgeColor: '#ffd60a' },
-  { id: 'terminal', name: 'Terminal', icon: '💻', desc: 'Cyber ZSH Console', badgeColor: '#00ff88' },
-  { id: 'snake', name: 'Retro Game', icon: '👾', desc: 'Neon Snake Arcade', badgeColor: '#ff007f' },
-  { id: 'music', name: 'Cyber FM', icon: '🎵', desc: 'Trình phát nhạc Lo-fi', badgeColor: '#9d4edd' },
-  { id: 'cv', name: 'Resume.pdf', icon: '📄', desc: 'Hồ sơ năng lực CV', badgeColor: '#38bdf8' },
-]
-
-function drawDesktop(
+function drawMoonLandscape(
   ctx: CanvasRenderingContext2D,
   W: number,
   H: number,
-  t: number,
-  state: {
-    activeApp: AppId
-    openWindows: Set<AppId>
-    activeTab: CodeTab
-    startMenuOpen: boolean
-    termCmd: string
-  },
-  hover: string | null
-): Hit[] {
-  const hits: Hit[] = []
-
-  // 1. Hình nền Desktop: Cyberpunk Aurora & Grid
-  const bg = ctx.createLinearGradient(0, 0, W, H)
-  bg.addColorStop(0, '#070913')
-  bg.addColorStop(0.45, '#0e1326')
-  bg.addColorStop(0.8, '#180e2b')
-  bg.addColorStop(1, '#080511')
-  ctx.fillStyle = bg
+  screenType: 'main' | 'left' | 'laptop'
+) {
+  // Bầu trời đêm chuyển màu hoàng hôn nhẹ ở chân trời
+  const sky = ctx.createLinearGradient(0, 0, 0, H)
+  sky.addColorStop(0, '#0a1020')
+  sky.addColorStop(0.42, '#121d38')
+  sky.addColorStop(0.72, '#282642')
+  sky.addColorStop(0.88, '#583a48')
+  sky.addColorStop(1, '#825244')
+  ctx.fillStyle = sky
   ctx.fillRect(0, 0, W, H)
 
-  // Lưới viễn cận mờ ảo dưới đáy hình nền
-  ctx.strokeStyle = 'rgba(0, 245, 212, 0.08)'
-  ctx.lineWidth = 1
-  for (let x = 0; x < W; x += 48) {
+  // Bụi sao lấp lánh trên nền trời
+  ctx.fillStyle = '#ffffff'
+  const offsetSeed = screenType === 'left' ? 100 : screenType === 'main' ? 200 : 300
+  for (let i = 0; i < 50; i++) {
+    const sx = (i * 127.3 + offsetSeed) % W
+    const sy = (i * 73.1) % (H * 0.65)
+    const sr = i % 4 === 0 ? 1.4 : 0.8
+    ctx.globalAlpha = 0.25 + (i % 4) * 0.18
     ctx.beginPath()
-    ctx.moveTo(x, 0)
-    ctx.lineTo(x, H - 44)
-    ctx.stroke()
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2)
+    ctx.fill()
   }
-  for (let y = 0; y < H - 44; y += 48) {
+  ctx.globalAlpha = 1
+
+  // Mặt trăng khổng lồ (vị trí canh chỉnh chuẩn theo ảnh 2)
+  const mx = screenType === 'left' ? W * 0.85 : screenType === 'main' ? W * 0.52 : W * 0.52
+  const my = screenType === 'laptop' ? H * 0.44 : H * 0.45
+  const mr = Math.min(W, H) * (screenType === 'laptop' ? 0.38 : 0.42)
+
+  // Vầng hào quang sáng của mặt trăng
+  const glow = ctx.createRadialGradient(mx, my, mr * 0.75, mx, my, mr * 1.7)
+  glow.addColorStop(0, 'rgba(255, 252, 235, 0.55)')
+  glow.addColorStop(0.4, 'rgba(255, 238, 195, 0.22)')
+  glow.addColorStop(0.8, 'rgba(255, 230, 180, 0.05)')
+  glow.addColorStop(1, 'rgba(255, 230, 180, 0)')
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(mx, my, mr * 1.7, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Bề mặt Mặt trăng
+  const moonGrad = ctx.createRadialGradient(mx - mr * 0.15, my - mr * 0.15, mr * 0.1, mx, my, mr)
+  moonGrad.addColorStop(0, '#fffff7')
+  moonGrad.addColorStop(0.65, '#fef7dc')
+  moonGrad.addColorStop(0.92, '#eddcb5')
+  moonGrad.addColorStop(1, '#c8b590')
+  ctx.fillStyle = moonGrad
+  ctx.beginPath()
+  ctx.arc(mx, my, mr, 0, Math.PI * 2)
+  ctx.fill()
+
+  // Chi tiết bề mặt / hố trăng (craters & maria)
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(mx, my, mr, 0, Math.PI * 2)
+  ctx.clip()
+
+  ctx.fillStyle = 'rgba(75, 68, 58, 0.28)'
+  const craters = [
+    { x: -0.25, y: -0.28, r: 0.32 },
+    { x: 0.22, y: -0.18, r: 0.29 },
+    { x: -0.06, y: 0.12, r: 0.42 },
+    { x: 0.32, y: 0.18, r: 0.26 },
+    { x: -0.32, y: 0.12, r: 0.22 },
+    { x: 0.08, y: -0.38, r: 0.2 },
+  ]
+  craters.forEach((c) => {
     ctx.beginPath()
-    ctx.moveTo(0, y)
-    ctx.lineTo(W, y)
-    ctx.stroke()
+    ctx.arc(mx + c.x * mr, my + c.y * mr, c.r * mr, 0, Math.PI * 2)
+    ctx.fill()
+  })
+
+  // Dải mây hoàng hôn mềm mại vắt ngang phía dưới mặt trăng
+  ctx.fillStyle = 'rgba(215, 138, 92, 0.5)'
+  for (let j = 0; j < 5; j++) {
+    const cy = my + mr * (0.22 + j * 0.17)
+    ctx.beginPath()
+    ctx.ellipse(mx + (j % 2 === 0 ? 35 : -40), cy, mr * 1.3, 20 + j * 5, (j - 2) * 0.04, 0, Math.PI * 2)
+    ctx.fill()
   }
+  ctx.restore()
 
-  // Watermark hệ điều hành giữa màn hình
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.04)'
-  ctx.font = `800 64px ${FONT}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('CYBER-OS // 2026', W / 2, (H - 44) / 2)
-  ctx.font = `600 16px ${MONO}`
-  ctx.fillStyle = 'rgba(0, 245, 212, 0.15)'
-  ctx.fillText('BATTLESTATION WORKSTATION · CORE i9 · RTX 4090', W / 2, (H - 44) / 2 + 50)
+  // Dãy Rừng Thông bóng đổ (Pine Forest Silhouette)
+  ctx.fillStyle = '#060911'
+  ctx.fillRect(0, H - 36, W, 36)
 
-  // 2. Icon Desktop (Cột bên trái)
-  DESKTOP_APPS.forEach((app, i) => {
-    const ix = 24
-    const iy = 26 + i * 86
-    const iw = 78
-    const ih = 74
-    const isHovered = hover === `d_${app.id}`
-    const isActive = state.activeApp === app.id
+  const step = Math.max(12, Math.floor(W / 42))
+  for (let x = 0; x <= W + 20; x += step) {
+    const seed = (x * 37) % 100
+    const treeH = 40 + seed * 0.65
+    const baseW = 14 + (seed % 10)
+    const ty = H - 20
 
-    if (isHovered || isActive) {
-      ctx.fillStyle = isHovered ? 'rgba(0, 245, 212, 0.18)' : 'rgba(255, 255, 255, 0.08)'
-      rr(ctx, ix, iy, iw, ih, 10)
+    ctx.beginPath()
+    ctx.moveTo(x, ty - treeH)
+    ctx.lineTo(x + baseW * 0.5, ty - treeH * 0.4)
+    ctx.lineTo(x + baseW * 0.32, ty - treeH * 0.4)
+    ctx.lineTo(x + baseW * 0.72, ty)
+    ctx.lineTo(x - baseW * 0.72, ty)
+    ctx.lineTo(x - baseW * 0.32, ty - treeH * 0.4)
+    ctx.lineTo(x - baseW * 0.5, ty - treeH * 0.4)
+    ctx.closePath()
+    ctx.fill()
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. MÀN HÌNH CHÍNH (GIỮA): WINDOWS 11 DESKTOP THỰC THỤ
+// ─────────────────────────────────────────────────────────────────────────────
+function drawMainDesktop(ctx: CanvasRenderingContext2D, W: number, H: number, hover: string | null): Hit[] {
+  const hits: Hit[] = []
+
+  // Vẽ hình nền Mặt trăng & Rừng thông
+  drawMoonLandscape(ctx, W, H, 'main')
+
+  // Icon Desktop (Xếp 2 cột bên trái giống ảnh 2)
+  const icons = [
+    { id: 'pc', name: 'This PC', icon: '💻' },
+    { id: 'bin', name: 'Recycle Bin', icon: '🗑️' },
+    { id: 'proj', name: 'Dự Án', icon: '📁' },
+    { id: 'code', name: 'VS Code', icon: '📝' },
+    { id: 'web', name: 'Chrome', icon: '🌐' },
+    { id: 'term', name: 'Terminal', icon: '⚡' },
+    { id: 'steam', name: 'Steam', icon: '🎮' },
+    { id: 'music', name: 'Spotify', icon: '🎵' },
+    { id: 'cv', name: 'CV_Tri.pdf', icon: '📄' },
+    { id: 'notes', name: 'Notes', icon: '📋' },
+  ]
+
+  icons.forEach((ic, i) => {
+    const col = Math.floor(i / 5)
+    const row = i % 5
+    const ix = 20 + col * 68
+    const iy = 24 + row * 72
+    const isHv = hover === `ic_${ic.id}`
+
+    if (isHv) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+      rr(ctx, ix, iy, 58, 62, 8)
       ctx.fill()
-      ctx.strokeStyle = isHovered ? '#00f5d4' : 'rgba(255, 255, 255, 0.15)'
-      ctx.lineWidth = 1
-      rr(ctx, ix, iy, iw, ih, 10)
-      ctx.stroke()
     }
 
-    // Biểu tượng App Icon
-    ctx.font = '28px system-ui'
+    ctx.font = '24px system-ui'
     ctx.textAlign = 'center'
-    ctx.fillText(app.icon, ix + iw / 2, iy + 30)
+    ctx.fillText(ic.icon, ix + 29, iy + 26)
 
-    // Tên App
-    ctx.font = `600 11.5px ${FONT}`
-    ctx.fillStyle = isHovered ? '#ffffff' : '#cbd5e1'
-    ctx.fillText(app.name, ix + iw / 2, iy + 58)
+    ctx.font = `600 10.5px ${FONT}`
+    ctx.fillStyle = '#ffffff'
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'
+    ctx.shadowBlur = 4
+    ctx.fillText(ic.name, ix + 29, iy + 48)
+    ctx.shadowBlur = 0
 
     hits.push({
-      id: `d_${app.id}`,
+      id: `ic_${ic.id}`,
       x: ix,
       y: iy,
-      w: iw,
-      h: ih,
+      w: 58,
+      h: 62,
       run: () => {
-        state.activeApp = app.id
-        state.openWindows.add(app.id)
-        state.startMenuOpen = false
+        if (ic.id === 'proj' || ic.id === 'code') {
+          window.open(PROFILE.github, '_blank', 'noopener')
+        } else if (ic.id === 'cv') {
+          if (PROFILE.cv) window.open(PROFILE.cv, '_blank', 'noopener')
+        }
       },
     })
   })
 
-  // 3. Cửa Sổ Ứng Dụng Đang Mở (Main Window)
-  const wx = 120
-  const wy = 24
-  const ww = W - 144
-  const wh = H - 44 - 48
-
-  // Bóng đổ cửa sổ
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
-  rr(ctx, wx + 6, wy + 6, ww, wh, 14)
-  ctx.fill()
-
-  // Khung Cửa Sổ
-  ctx.fillStyle = '#0f1322'
-  rr(ctx, wx, wy, ww, wh, 14)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(0, 245, 212, 0.35)'
-  ctx.lineWidth = 1.5
-  rr(ctx, wx, wy, ww, wh, 14)
-  ctx.stroke()
-
-  // Title Bar của Cửa Sổ (35px)
+  // Thanh Taskbar Windows 11 ở cạnh dưới (Thanh kính mờ bo cong)
   const tbh = 38
-  ctx.fillStyle = '#161c30'
-  rr(ctx, wx, wy, ww, tbh, 14)
-  ctx.fill()
-  ctx.fillRect(wx, wy + tbh - 14, ww, 14) // phủ phẳng góc dưới titlebar
-
-  // Window Controls (3 nút màu macOS)
-  // Close (Đỏ)
-  ctx.fillStyle = hover === 'win_close' ? '#ff3b30' : '#ff5f56'
-  ctx.beginPath()
-  ctx.arc(wx + 22, wy + tbh / 2, 7, 0, Math.PI * 2)
-  ctx.fill()
-  hits.push({
-    id: 'win_close',
-    x: wx + 12,
-    y: wy + 8,
-    w: 20,
-    h: 22,
-    run: () => {
-      state.openWindows.delete(state.activeApp)
-      const remain = Array.from(state.openWindows)
-      if (remain.length > 0) state.activeApp = remain[remain.length - 1]
-    },
-  })
-
-  // Minimize (Vàng)
-  ctx.fillStyle = '#ffbd2e'
-  ctx.beginPath()
-  ctx.arc(wx + 44, wy + tbh / 2, 7, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Maximize (Lục)
-  ctx.fillStyle = '#27c93f'
-  ctx.beginPath()
-  ctx.arc(wx + 66, wy + tbh / 2, 7, 0, Math.PI * 2)
-  ctx.fill()
-
-  // Tiêu đề Cửa Sổ
-  const curApp = DESKTOP_APPS.find((a) => a.id === state.activeApp) ?? DESKTOP_APPS[0]
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.font = `700 13.5px ${FONT}`
-  ctx.fillStyle = '#f1f5f9'
-  ctx.fillText(`${curApp.icon} ${curApp.name} — CyberOS Application`, wx + ww / 2, wy + tbh / 2)
-
-  // 4. Nội Dung Chi Tiết Bên Trong Cửa Sổ
-  const cx = wx
-  const cy = wy + tbh
-  const cw = ww
-  const ch = wh - tbh
-
-  if (state.activeApp === 'vscode') {
-    // ─────────────── VS CODE WINDOW ───────────────
-    // Sub-Tabs bar
-    ctx.fillStyle = '#101426'
-    ctx.fillRect(cx, cy, cw, 34)
-
-    const tabs: { id: CodeTab; label: string; icon: string }[] = [
-      { id: 'profile', label: 'profile.ts', icon: 'TS' },
-      { id: 'skills', label: 'skills.json', icon: '{}' },
-      { id: 'contact', label: 'contact.md', icon: 'MD' },
-    ]
-
-    tabs.forEach((tb, i) => {
-      const tx = cx + 16 + i * 140
-      const isAct = state.activeTab === tb.id
-      ctx.fillStyle = isAct ? '#1a223a' : '#14182b'
-      rr(ctx, tx, cy + 4, 130, 30, 6)
-      ctx.fill()
-
-      if (isAct) {
-        ctx.fillStyle = '#00f5d4'
-        ctx.fillRect(tx, cy + 4, 130, 2)
-      }
-
-      ctx.font = `700 11px ${MONO}`
-      ctx.fillStyle = '#00f5d4'
-      ctx.textAlign = 'left'
-      ctx.fillText(tb.icon, tx + 10, cy + 19)
-
-      ctx.font = `600 12.5px ${FONT}`
-      ctx.fillStyle = isAct ? '#ffffff' : '#94a3b8'
-      ctx.fillText(tb.label, tx + 34, cy + 19)
-
-      hits.push({
-        id: `tab_${tb.id}`,
-        x: tx,
-        y: cy + 4,
-        w: 130,
-        h: 30,
-        run: () => {
-          state.activeTab = tb.id
-        },
-      })
-    })
-
-    // Editor Body
-    ctx.fillStyle = '#0b0e1b'
-    ctx.fillRect(cx, cy + 34, cw, ch - 34)
-
-    // Sidebar mini explorer
-    ctx.fillStyle = '#0d1122'
-    ctx.fillRect(cx, cy + 34, 46, ch - 34)
-    ;['📄', '🔍', '⎇', '🐞', '📦'].forEach((ic, i) => {
-      ctx.font = '15px system-ui'
-      ctx.textAlign = 'center'
-      ctx.fillStyle = i === 0 ? '#00f5d4' : '#475569'
-      ctx.fillText(ic, cx + 23, cy + 62 + i * 36)
-    })
-
-    // Code lines content
-    let lines: string[] = []
-    if (state.activeTab === 'profile') {
-      lines = [
-        '// ⚡ PHẠM THÀNH TRÍ — SENIOR FULL-STACK & 3D WEB DEVELOPER',
-        'export const profile = {',
-        `  name: "${PROFILE.name}",`,
-        `  role: "${PROFILE.role}",`,
-        '  specialties: ["React Three Fiber", "Next.js 16", "WebGL Shaders", ".NET Core"],',
-        '  architecture: "High-Performance 3D Web & Interactive AI Agents",',
-        '  status: "🟢 Available for high-impact creative engineering",',
-        '  motto: "Transforming 2D Web into Immersive 3D Reality",',
-        '};',
-      ]
-    } else if (state.activeTab === 'skills') {
-      lines = [
-        '{',
-        '  "frontend": ["Next.js 16", "React 19", "Three.js", "R3F", "GLSL Shaders"],',
-        '  "backend": [".NET 9", "C#", "Node.js", "FastAPI", "PostgreSQL"],',
-        '  "ai_stack": ["LLM Agentic Systems", "LangChain", "Vector DB", "OpenAI API"],',
-        '  "devops": ["Docker", "Vercel", "GitHub Actions", "Turbopack", "AWS"]',
-        '}',
-      ]
-    } else {
-      lines = [
-        '# 📬 Get In Touch',
-        `Email: ${PROFILE.email}`,
-        `GitHub: ${PROFILE.github}`,
-        `LinkedIn: ${PROFILE.linkedin}`,
-        '',
-        '> "Sẵn sàng hợp tác xây dựng những sản phẩm công nghệ đột phá."',
-      ]
-    }
-
-    ctx.font = `500 15px ${MONO}`
-    lines.forEach((ln, idx) => {
-      const ly = cy + 64 + idx * 26
-      ctx.fillStyle = '#334155'
-      ctx.textAlign = 'right'
-      ctx.fillText(String(idx + 1), cx + 80, ly)
-
-      ctx.textAlign = 'left'
-      ctx.fillStyle = ln.startsWith('//') || ln.startsWith('#') || ln.startsWith('>') ? '#64748b' : ln.includes('"') ? '#a7f3d0' : '#e2e8f0'
-      ctx.fillText(ln, cx + 96, ly)
-    })
-
-    // Cursor nhấp nháy
-    if (Math.floor(t * 3) % 2 === 0) {
-      ctx.fillStyle = '#00f5d4'
-      ctx.fillRect(cx + 96, cy + 64 + lines.length * 26 - 12, 2.5, 18)
-    }
-  } else if (state.activeApp === 'projects') {
-    // ─────────────── PROJECTS BROWSER WINDOW ───────────────
-    // URL Bar
-    ctx.fillStyle = '#101528'
-    ctx.fillRect(cx, cy, cw, 40)
-    ctx.fillStyle = '#1c243f'
-    rr(ctx, cx + 16, cy + 6, cw - 32, 28, 6)
-    ctx.fill()
-    ctx.font = `500 12.5px ${MONO}`
-    ctx.textAlign = 'left'
-    ctx.fillStyle = '#00f5d4'
-    ctx.fillText('🔒 https://thanhtri.dev/portfolio/repositories', cx + 32, cy + 20)
-
-    // Project Grid (4 card lớn)
-    const cardW = (cw - 48) / 2
-    const cardH = (ch - 40 - 36) / 2
-    PROFILE.projects.slice(0, 4).forEach((pr, i) => {
-      const col = i % 2
-      const row = Math.floor(i / 2)
-      const px = cx + 16 + col * (cardW + 16)
-      const py = cy + 52 + row * (cardH + 12)
-      const isCardHv = hover === `proj_${i}`
-
-      ctx.fillStyle = isCardHv ? 'rgba(30, 41, 69, 0.95)' : 'rgba(18, 25, 45, 0.85)'
-      rr(ctx, px, py, cardW, cardH, 10)
-      ctx.fill()
-      ctx.strokeStyle = isCardHv ? '#00f5d4' : 'rgba(255, 255, 255, 0.08)'
-      ctx.lineWidth = isCardHv ? 2 : 1
-      rr(ctx, px, py, cardW, cardH, 10)
-      ctx.stroke()
-
-      // Dải màu
-      ctx.fillStyle = ['#00f5d4', '#ff007f', '#ffd60a', '#a855f7'][i]
-      rr(ctx, px, py, 6, cardH, 3)
-      ctx.fill()
-
-      // Tên dự án
-      ctx.font = `700 16px ${FONT}`
-      ctx.fillStyle = '#ffffff'
-      ctx.fillText(pr.title, px + 18, py + 26)
-
-      // Mô tả
-      ctx.font = `500 12px ${FONT}`
-      ctx.fillStyle = '#94a3b8'
-      ctx.fillText((pr.desc ?? '').slice(0, 48) + '...', px + 18, py + 52)
-
-      // Tag & Nút mở
-      ctx.font = `600 11px ${MONO}`
-      ctx.fillStyle = '#38bdf8'
-      ctx.fillText(pr.meta ?? '', px + 18, py + 80)
-
-      ctx.fillStyle = isCardHv ? '#00f5d4' : 'rgba(255, 255, 255, 0.12)'
-      rr(ctx, px + cardW - 74, py + 62, 60, 26, 6)
-      ctx.fill()
-      ctx.fillStyle = isCardHv ? '#070913' : '#ffffff'
-      ctx.textAlign = 'center'
-      ctx.fillText('XEM ↗', px + cardW - 44, py + 75)
-      ctx.textAlign = 'left'
-
-      hits.push({
-        id: `proj_${i}`,
-        x: px,
-        y: py,
-        w: cardW,
-        h: cardH,
-        run: () => {
-          if (pr.href) window.open(pr.href, '_blank', 'noopener')
-        },
-      })
-    })
-  } else if (state.activeApp === 'terminal') {
-    // ─────────────── TERMINAL WINDOW ───────────────
-    ctx.fillStyle = '#070a12'
-    ctx.fillRect(cx, cy, cw, ch)
-
-    const termLines = [
-      'thanhtri@cyber-battlestation:~$ neofetch --cyber',
-      '  ██████╗ ██╗   ██╗██████╗ ███████╗██████╗      OS: CyberOS 64-bit x86_64',
-      ' ██╔════╝ ╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗     Host: Battlestation Dev Rig',
-      ' ██║       ╚████╔╝ ██████╔╝█████╗  ██████╔╝     Kernel: 6.8.4-cyber-lowlatency',
-      ' ██║        ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗     Uptime: 24 days, 16 hours',
-      ' ╚██████╗    ██║   ██████╔╝███████╗██║  ██║     Shell: zsh 5.9 (x86_64)',
-      '  ╚═════╝    ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝     CPU: AMD Ryzen 9 7950X3D (32) @ 5.7GHz',
-      '                                                GPU: NVIDIA GeForce RTX 4090 24GB',
-      'thanhtri@cyber-battlestation:~$ ./deploy_production.sh',
-      '[SUCCESS] All 3D Assets compiled cleanly with Turbopack in 911ms. Status: LIVE.',
-      'thanhtri@cyber-battlestation:~$ █',
-    ]
-
-    ctx.font = `500 13px ${MONO}`
-    termLines.forEach((ln, i) => {
-      ctx.fillStyle = i === 0 || i === 8 ? '#00f5d4' : i === 9 ? '#00ff88' : '#7dd3fc'
-      ctx.fillText(ln, cx + 20, cy + 30 + i * 22)
-    })
-  } else if (state.activeApp === 'music') {
-    // ─────────────── MUSIC PLAYER WINDOW ───────────────
-    ctx.fillStyle = '#0f111f'
-    ctx.fillRect(cx, cy, cw, ch)
-
-    const tr = TRACKS[music.index]
-    ctx.textAlign = 'center'
-    ctx.font = '54px system-ui'
-    ctx.fillText('💿', cx + cw / 2, cy + 80)
-
-    ctx.font = `700 24px ${FONT}`
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(tr.title, cx + cw / 2, cy + 130)
-
-    ctx.font = `500 14px ${FONT}`
-    ctx.fillStyle = '#94a3b8'
-    ctx.fillText(`${tr.artist} · ${tr.mood}`, cx + cw / 2, cy + 155)
-
-    // Equalizer bars
-    const lv = music.levels(16)
-    for (let i = 0; i < 16; i++) {
-      const h = Math.max(6, lv[i] * 60)
-      ctx.fillStyle = '#00f5d4'
-      ctx.fillRect(cx + cw / 2 - 120 + i * 16, cy + 220 - h, 10, h)
-    }
-
-    // Playback Controls
-    ctx.fillStyle = '#1c243f'
-    rr(ctx, cx + cw / 2 - 80, cy + 240, 160, 42, 21)
-    ctx.fill()
-    ctx.font = `700 15px ${MONO}`
-    ctx.fillStyle = '#00f5d4'
-    ctx.fillText(music.playing ? '❚❚ PAUSE' : '▶ PLAY', cx + cw / 2, cy + 261)
-
-    hits.push({
-      id: 'music_toggle',
-      x: cx + cw / 2 - 80,
-      y: cy + 240,
-      w: 160,
-      h: 42,
-      run: () => {
-        if (music.playing) music.pause()
-        else void music.play()
-      },
-    })
-  } else {
-    // ─────────────── RESUME / SNAKE WINDOW ───────────────
-    ctx.fillStyle = '#0d1120'
-    ctx.fillRect(cx, cy, cw, ch)
-    ctx.textAlign = 'center'
-    ctx.font = `700 22px ${FONT}`
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText('HỒ SƠ NĂNG LỰC // PHẠM THÀNH TRÍ', cx + cw / 2, cy + 80)
-    ctx.font = `500 14px ${FONT}`
-    ctx.fillStyle = '#94a3b8'
-    ctx.fillText('Tải bản CV PDF đầy đủ để xem chi tiết quá trình học tập & công tác', cx + cw / 2, cy + 115)
-
-    ctx.fillStyle = '#00f5d4'
-    rr(ctx, cx + cw / 2 - 100, cy + 150, 200, 44, 10)
-    ctx.fill()
-    ctx.fillStyle = '#070913'
-    ctx.font = `700 14px ${FONT}`
-    ctx.fillText('📥 TẢI CV BẢN PDF', cx + cw / 2, cy + 174)
-
-    hits.push({
-      id: 'cv_download',
-      x: cx + cw / 2 - 100,
-      y: cy + 150,
-      w: 200,
-      h: 44,
-      run: () => {
-        if (PROFILE.cv) window.open(PROFILE.cv, '_blank', 'noopener')
-      },
-    })
-  }
-
-  // 5. Thanh Taskbar / Dock Ở Cạnh Dưới (Height = 44px)
-  const tby = H - 44
-  ctx.fillStyle = 'rgba(10, 14, 25, 0.92)'
-  ctx.fillRect(0, tby, W, 44)
-  ctx.strokeStyle = 'rgba(0, 245, 212, 0.3)'
+  const tby = H - tbh
+  ctx.fillStyle = 'rgba(18, 22, 35, 0.78)'
+  ctx.fillRect(0, tby, W, tbh)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)'
   ctx.lineWidth = 1
   ctx.beginPath()
   ctx.moveTo(0, tby)
   ctx.lineTo(W, tby)
   ctx.stroke()
 
-  // Nút Start Menu (Góc trái)
-  const isStartHv = hover === 'task_start'
-  ctx.fillStyle = isStartHv || state.startMenuOpen ? '#00f5d4' : 'rgba(255, 255, 255, 0.08)'
-  rr(ctx, 10, tby + 5, 88, 34, 8)
-  ctx.fill()
-  ctx.font = `700 13px ${FONT}`
-  ctx.fillStyle = isStartHv || state.startMenuOpen ? '#070913' : '#ffffff'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('❖ START', 54, tby + 22)
-
-  hits.push({
-    id: 'task_start',
-    x: 10,
-    y: tby + 5,
-    w: 88,
-    h: 34,
-    run: () => {
-      state.startMenuOpen = !state.startMenuOpen
-    },
-  })
-
-  // Các Icon Ứng Dụng Trên Taskbar
-  DESKTOP_APPS.forEach((app, i) => {
-    const ax = 110 + i * 44
-    const isAct = state.activeApp === app.id
-    const isHv = hover === `tb_${app.id}`
-
-    if (isAct || isHv) {
-      ctx.fillStyle = isAct ? 'rgba(0, 245, 212, 0.22)' : 'rgba(255, 255, 255, 0.1)'
-      rr(ctx, ax, tby + 5, 38, 34, 6)
+  // Cụm Icon Căn Giữa Windows 11
+  const winIcons = ['🪟', '🔍', '📂', '🌐', '📝', '🎧', '🎮']
+  const startX = W / 2 - (winIcons.length * 34) / 2
+  winIcons.forEach((wIc, idx) => {
+    const wx = startX + idx * 34
+    const isWinHv = hover === `tb_${idx}`
+    if (isWinHv) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'
+      rr(ctx, wx, tby + 4, 30, 30, 6)
       ctx.fill()
     }
-
-    ctx.font = '18px system-ui'
+    ctx.font = '16px system-ui'
     ctx.textAlign = 'center'
-    ctx.fillText(app.icon, ax + 19, tby + 21)
-
-    // Đèn LED báo ứng dụng đang chạy
-    if (state.openWindows.has(app.id)) {
-      ctx.fillStyle = isAct ? '#00f5d4' : '#64748b'
-      ctx.fillRect(ax + 14, tby + 36, 10, 2.5)
-    }
+    ctx.textBaseline = 'middle'
+    ctx.fillText(wIc, wx + 15, tby + 19)
 
     hits.push({
-      id: `tb_${app.id}`,
-      x: ax,
-      y: tby + 5,
-      w: 38,
-      h: 34,
+      id: `tb_${idx}`,
+      x: wx,
+      y: tby + 4,
+      w: 30,
+      h: 30,
       run: () => {
-        state.activeApp = app.id
-        state.openWindows.add(app.id)
-        state.startMenuOpen = false
+        if (idx === 3 || idx === 4) window.open(PROFILE.github, '_blank', 'noopener')
       },
     })
   })
 
-  // System Tray Góc Phải (Pin, Wifi, Loa, Đồng Hồ Thời Gian Thực)
+  // System Tray góc phải (Wifi, Âm lượng, Pin, Ngày Giờ)
   ctx.textAlign = 'right'
-  ctx.font = `600 12.5px ${MONO}`
-  ctx.fillStyle = '#94a3b8'
-  const timeStr = new Date().toLocaleTimeString('vi-VN', { hour12: false })
-  ctx.fillText(`📶 5G   🔊 100%   ⚡   ${timeStr}`, W - 18, tby + 22)
-
-  // 6. Start Menu Popup Nếu Đang Mở
-  if (state.startMenuOpen) {
-    const smw = 260
-    const smh = 320
-    const smx = 10
-    const smy = tby - smh - 8
-
-    ctx.fillStyle = '#0f1426'
-    rr(ctx, smx, smy, smw, smh, 12)
-    ctx.fill()
-    ctx.strokeStyle = '#00f5d4'
-    ctx.lineWidth = 1.5
-    rr(ctx, smx, smy, smw, smh, 12)
-    ctx.stroke()
-
-    // Avatar User
-    ctx.fillStyle = '#1e293b'
-    rr(ctx, smx + 14, smy + 14, 44, 44, 22)
-    ctx.fill()
-    ctx.font = '22px system-ui'
-    ctx.textAlign = 'center'
-    ctx.fillText('👨‍💻', smx + 36, smy + 36)
-
-    ctx.textAlign = 'left'
-    ctx.font = `700 14px ${FONT}`
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(PROFILE.name, smx + 68, smy + 28)
-    ctx.font = `500 11px ${MONO}`
-    ctx.fillStyle = '#00f5d4'
-    ctx.fillText('ADMINISTRATOR // DEV', smx + 68, smy + 46)
-
-    // Divider
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
-    ctx.beginPath()
-    ctx.moveTo(smx + 14, smy + 70)
-    ctx.lineTo(smx + smw - 14, smy + 70)
-    ctx.stroke()
-
-    // Danh sách App nhanh trong Start Menu
-    DESKTOP_APPS.slice(0, 5).forEach((ap, idx) => {
-      const sy = smy + 82 + idx * 42
-      const isSmHv = hover === `sm_${ap.id}`
-      if (isSmHv) {
-        ctx.fillStyle = 'rgba(0, 245, 212, 0.15)'
-        rr(ctx, smx + 12, sy, smw - 24, 36, 6)
-        ctx.fill()
-      }
-      ctx.font = '18px system-ui'
-      ctx.fillText(ap.icon, smx + 24, sy + 18)
-      ctx.font = `600 13px ${FONT}`
-      ctx.fillStyle = isSmHv ? '#00f5d4' : '#e2e8f0'
-      ctx.fillText(ap.name, smx + 56, sy + 18)
-
-      hits.push({
-        id: `sm_${ap.id}`,
-        x: smx + 12,
-        y: sy,
-        w: smw - 24,
-        h: 36,
-        run: () => {
-          state.activeApp = ap.id
-          state.openWindows.add(ap.id)
-          state.startMenuOpen = false
-        },
-      })
-    })
-  }
+  ctx.textBaseline = 'middle'
+  ctx.font = `600 11px ${FONT}`
+  ctx.fillStyle = '#e2e8f0'
+  const timeStr = new Date().toLocaleTimeString('vi-VN', { hour12: false, hour: '2-digit', minute: '2-digit' })
+  ctx.fillText(`ENG  📶 🔊 ⚡  ${timeStr}`, W - 14, tby + 19)
 
   return hits
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. MÀN HÌNH TRÁI: SYSTEM TELEMETRY & HARDWARE GAUGES (640×640)
+// 3. MÀN HÌNH TRÁI: DUAL MONITOR NỐI DÀI HÌNH NỀN
 // ─────────────────────────────────────────────────────────────────────────────
-function drawSystemDashboard(ctx: CanvasRenderingContext2D, W: number, H: number, t: number) {
-  ctx.fillStyle = '#070a14'
-  ctx.fillRect(0, 0, W, H)
+function drawLeftMonitor(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  drawMoonLandscape(ctx, W, H, 'left')
 
-  // Viền sáng HUD
-  ctx.strokeStyle = 'rgba(0, 245, 212, 0.25)'
-  ctx.lineWidth = 1.5
-  ctx.strokeRect(14, 14, W - 28, H - 28)
-
-  // Header
-  ctx.textBaseline = 'middle'
-  ctx.textAlign = 'left'
-  ctx.font = `800 13px ${MONO}`
-  ctx.fillStyle = '#00f5d4'
-  ctx.fillText('// HARDWARE TELEMETRY & SENSORS', 28, 38)
-
-  // 1. Đồng Hồ CPU / GPU Vòng Tròn
-  const cpuLoad = Math.floor(38 + 12 * Math.sin(t * 1.5))
-  const gpuLoad = Math.floor(65 + 18 * Math.cos(t * 1.2))
-
-  // CPU Gauge
-  const drawGauge = (x: number, y: number, label: string, val: number, color: string, sub: string) => {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'
-    ctx.lineWidth = 8
-    ctx.beginPath()
-    ctx.arc(x, y, 46, 0, Math.PI * 2)
-    ctx.stroke()
-
-    ctx.strokeStyle = color
-    ctx.lineWidth = 8
-    ctx.beginPath()
-    ctx.arc(x, y, 46, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * val) / 100)
-    ctx.stroke()
-
-    ctx.textAlign = 'center'
-    ctx.font = `800 20px ${MONO}`
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(`${val}%`, x, y - 4)
-    ctx.font = `600 11px ${MONO}`
-    ctx.fillStyle = color
-    ctx.fillText(label, x, y + 16)
-    ctx.font = `500 10.5px ${FONT}`
-    ctx.fillStyle = '#94a3b8'
-    ctx.fillText(sub, x, y + 68)
-  }
-
-  drawGauge(120, 120, 'CPU LOAD', cpuLoad, '#00f5d4', '4.8 GHz · 42°C')
-  drawGauge(300, 120, 'GPU LOAD', gpuLoad, '#ff007f', 'RTX 4090 · 56°C')
-  drawGauge(480, 120, 'VRAM', 48, '#ffd60a', '11.8 / 24 GB')
-
-  // 2. RAM Usage Bar
-  ctx.textAlign = 'left'
-  ctx.font = `700 12.5px ${MONO}`
-  ctx.fillStyle = '#cbd5e1'
-  ctx.fillText('DDR5 6400MHz MEMORY USAGE (21.4 GB / 64 GB)', 28, 230)
-  ctx.fillStyle = '#161d33'
-  rr(ctx, 28, 245, W - 56, 14, 7)
-  ctx.fill()
-  ctx.fillStyle = '#00f5d4'
-  rr(ctx, 28, 245, (W - 56) * 0.33, 14, 7)
-  ctx.fill()
-
-  // 3. Network Live Speed
-  ctx.fillStyle = '#12172b'
-  rr(ctx, 28, 285, W - 56, 68, 10)
-  ctx.fill()
-  ctx.font = `700 12px ${MONO}`
-  ctx.fillStyle = '#00f5d4'
-  ctx.fillText('FIBER 10Gbps DUPLEX', 44, 308)
-  ctx.font = `600 16px ${MONO}`
-  ctx.fillStyle = '#ffffff'
-  ctx.fillText('▲ 142.8 MB/s      ▼ 894.2 MB/s', 44, 334)
-
-  // 4. Git Repositories Status
-  ctx.font = `800 13px ${MONO}`
-  ctx.fillStyle = '#00f5d4'
-  ctx.fillText('// GITHUB REPO ACTIVITY (thanhtri-ba)', 28, 395)
-
-  const commits = [
-    { msg: 'feat: Cyber Battlestation Real OS Desktop', time: 'Just now', branch: 'main' },
-    { msg: 'fix: Camera responsive viewport auto-fit', time: '18m ago', branch: 'main' },
-    { msg: 'perf: 3D Canvas GPU shader acceleration', time: '1h ago', branch: 'dev' },
-    { msg: 'feat: 4 Cyberpunk neon lighting themes', time: '3h ago', branch: 'main' },
-  ]
-
-  commits.forEach((c, i) => {
-    const cy = 415 + i * 48
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)'
-    rr(ctx, 28, cy, W - 56, 40, 8)
-    ctx.fill()
-
-    ctx.font = `600 13px ${FONT}`
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(c.msg, 42, cy + 18)
-
-    ctx.font = `500 11px ${MONO}`
-    ctx.fillStyle = '#64748b'
-    ctx.fillText(`${c.branch} · ${c.time}`, 42, cy + 32)
-  })
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. MÀN HÌNH PHẢI: NEON SNAKE ARCADE GAME (800×500)
-// ─────────────────────────────────────────────────────────────────────────────
-const COLS = 26, ROWS = 15, CELL = 26
-type V = { x: number; y: number }
-type Game = {
-  state: 'idle' | 'play' | 'over'
-  snake: V[]
-  dir: V
-  next: V
-  food: V
-  score: number
-  best: number
-  acc: number
-}
-
-function newGame(best = 0): Game {
-  return {
-    state: 'idle',
-    snake: [{ x: 6, y: 7 }, { x: 5, y: 7 }, { x: 4, y: 7 }],
-    dir: { x: 1, y: 0 },
-    next: { x: 1, y: 0 },
-    food: { x: 16, y: 7 },
-    score: 0,
-    best,
-    acc: 0,
-  }
-}
-
-function spawnFood(g: Game) {
-  for (let k = 0; k < 200; k++) {
-    const f = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }
-    if (!g.snake.some((s) => s.x === f.x && s.y === f.y)) {
-      g.food = f
-      return
-    }
-  }
-}
-
-function stepGame(g: Game) {
-  g.dir = g.next
-  const h = { x: g.snake[0].x + g.dir.x, y: g.snake[0].y + g.dir.y }
-  if (h.x < 0 || h.y < 0 || h.x >= COLS || h.y >= ROWS || g.snake.some((s) => s.x === h.x && s.y === h.y)) {
-    g.state = 'over'
-    g.best = Math.max(g.best, g.score)
-    return
-  }
-  g.snake.unshift(h)
-  if (h.x === g.food.x && h.y === g.food.y) {
-    g.score++
-    spawnFood(g)
-  } else {
-    g.snake.pop()
-  }
-}
-
-function steer(g: Game, d: V) {
-  if (d.x === -g.dir.x && d.y === -g.dir.y) return
-  g.next = d
-}
-
-function drawSnake(ctx: CanvasRenderingContext2D, W: number, H: number, g: Game, t: number) {
-  ctx.fillStyle = '#050d0a'
-  ctx.fillRect(0, 0, W, H)
-
-  ctx.fillStyle = '#0a1d15'
-  ctx.fillRect(0, 0, W, 52)
-  ctx.fillStyle = '#00ff88'
-  ctx.fillRect(0, 50, W, 2)
-
-  ctx.font = `800 17px ${MONO}`
-  ctx.textBaseline = 'middle'
-  ctx.textAlign = 'left'
-  ctx.fillStyle = '#00ff88'
-  ctx.fillText('🕹️ NEON SNAKE 2077 // ARCADE EDITION', 22, 26)
-
-  ctx.textAlign = 'right'
-  ctx.fillStyle = '#79ffe1'
-  ctx.fillText(`SCORE: ${String(g.score).padStart(2, '0')}    HIGH: ${String(g.best).padStart(2, '0')}`, W - 22, 26)
-
-  const ox = (W - COLS * CELL) / 2
-  const oy = 52 + (H - 52 - ROWS * CELL) / 2
-
-  ctx.strokeStyle = 'rgba(0, 255, 136, 0.05)'
+  // Taskbar phụ
+  const tbh = 38
+  const tby = H - tbh
+  ctx.fillStyle = 'rgba(18, 22, 35, 0.78)'
+  ctx.fillRect(0, tby, W, tbh)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)'
   ctx.lineWidth = 1
-  for (let x = 0; x <= COLS; x++) {
-    ctx.beginPath()
-    ctx.moveTo(ox + x * CELL, oy)
-    ctx.lineTo(ox + x * CELL, oy + ROWS * CELL)
-    ctx.stroke()
-  }
-  for (let y = 0; y <= ROWS; y++) {
-    ctx.beginPath()
-    ctx.moveTo(ox, oy + y * CELL)
-    ctx.lineTo(ox + COLS * CELL, oy + y * CELL)
-    ctx.stroke()
-  }
-
-  ctx.strokeStyle = '#00ff88'
-  ctx.lineWidth = 2
-  ctx.strokeRect(ox, oy, COLS * CELL, ROWS * CELL)
-
-  // Quả cầu năng lượng
-  const pulse = 0.8 + 0.25 * Math.sin(t * 9)
-  const fx = ox + (g.food.x + 0.5) * CELL
-  const fy = oy + (g.food.y + 0.5) * CELL
-
-  ctx.fillStyle = 'rgba(255, 0, 128, 0.25)'
   ctx.beginPath()
-  ctx.arc(fx, fy, CELL * 0.7 * pulse, 0, Math.PI * 2)
-  ctx.fill()
-
-  ctx.fillStyle = '#ff007f'
-  ctx.shadowColor = '#ff007f'
-  ctx.shadowBlur = 18
-  ctx.beginPath()
-  ctx.arc(fx, fy, CELL * 0.38 * pulse, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.shadowBlur = 0
-
-  // Thân rắn
-  g.snake.forEach((s, i) => {
-    const isHead = i === 0
-    const color = isHead ? '#ffffff' : `hsl(${160 - i * 4}, 100%, ${55 - Math.min(i, 20)}%)`
-    ctx.fillStyle = color
-    ctx.shadowColor = isHead ? '#00f5d4' : '#00ff88'
-    ctx.shadowBlur = isHead ? 20 : 10
-    rr(ctx, ox + s.x * CELL + 2.5, oy + s.y * CELL + 2.5, CELL - 5, CELL - 5, isHead ? 8 : 5)
-    ctx.fill()
-  })
-  ctx.shadowBlur = 0
-
-  if (g.state !== 'play') {
-    ctx.fillStyle = 'rgba(5, 14, 10, 0.86)'
-    ctx.fillRect(ox, oy, COLS * CELL, ROWS * CELL)
-
-    ctx.textAlign = 'center'
-    if (g.state === 'over') {
-      ctx.fillStyle = '#ff0055'
-      ctx.shadowColor = '#ff0055'
-      ctx.shadowBlur = 24
-      ctx.font = `800 42px ${FONT}`
-      ctx.fillText('MISSION FAILED', W / 2, oy + (ROWS * CELL) / 2 - 32)
-      ctx.shadowBlur = 0
-
-      ctx.font = `700 22px ${MONO}`
-      ctx.fillStyle = '#ffd60a'
-      ctx.fillText(`KẾT QUẢ: ${g.score} ĐIỂM  ·  KỶ LỤC: ${g.best}`, W / 2, oy + (ROWS * CELL) / 2 + 12)
-    } else {
-      ctx.fillStyle = '#00ff88'
-      ctx.shadowColor = '#00ff88'
-      ctx.shadowBlur = 24
-      ctx.font = `800 40px ${FONT}`
-      ctx.fillText('NEON SNAKE 2077', W / 2, oy + (ROWS * CELL) / 2 - 32)
-      ctx.shadowBlur = 0
-
-      ctx.font = `600 18px ${FONT}`
-      ctx.fillStyle = '#79ffe1'
-      ctx.fillText('BẤM VÀO MÀN HÌNH HOẶC NHẤN SPACE ĐỂ CHƠI', W / 2, oy + (ROWS * CELL) / 2 + 12)
-    }
-
-    ctx.font = `500 14px ${MONO}`
-    ctx.fillStyle = '#82aaff'
-    ctx.fillText('PHÍM: [W] [A] [S] [D] HOẶC MŨI TÊN (ĐIỆN THOẠI: CHẠM ĐỂ RẼ)', W / 2, oy + (ROWS * CELL) / 2 + 48)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. BÀN PHÍM CƠ RGB & THẢM CHUỘT
-// ─────────────────────────────────────────────────────────────────────────────
-function drawKeys(ctx: CanvasRenderingContext2D, W: number, H: number, t: number) {
-  ctx.fillStyle = '#090a10'
-  ctx.fillRect(0, 0, W, H)
-
-  const rows = [15, 15, 14, 14, 9]
-  const rowLabels = [
-    ['ESC', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12', 'DEL', 'RGB'],
-    ['~', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'BACK', 'PGUP'],
-    ['TAB', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\', 'PGDN'],
-    ['CAPS', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'ENTER', 'END'],
-    ['CTRL', 'WIN', 'ALT', '       SPACEBAR       ', 'ALT', 'FN', '◀', '▲', '▶'],
-  ]
-
-  const kh = H / rows.length
-  rows.forEach((n, r) => {
-    const kw = W / n
-    for (let i = 0; i < n; i++) {
-      const isSpecial = (r === 2 && (i === 2 || i === 3 || i === 4)) || (r === 3 && (i === 1 || i === 2 || i === 3)) // WASD
-      const hue = (t * 70 + i * 18 + r * 30) % 360
-
-      ctx.fillStyle = isSpecial ? 'rgba(0, 245, 212, 0.85)' : `hsl(${hue}, 95%, 48%)`
-      rr(ctx, i * kw + 3, r * kh + 3, kw - 6, kh - 6, 5)
-      ctx.fill()
-
-      ctx.fillStyle = '#121420'
-      rr(ctx, i * kw + 5, r * kh + 5, kw - 10, kh - 10, 4)
-      ctx.fill()
-
-      const label = rowLabels[r]?.[i] ?? ''
-      ctx.font = `700 ${kw < 40 ? '9px' : '11px'} ${MONO}`
-      ctx.fillStyle = isSpecial ? '#00f5d4' : `hsl(${hue}, 90%, 75%)`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText(label, i * kw + kw / 2, r * kh + kh / 2)
-    }
-  })
-}
-
-function drawDeskmat(ctx: CanvasRenderingContext2D, W: number, H: number) {
-  ctx.fillStyle = '#080910'
-  ctx.fillRect(0, 0, W, H)
-
-  ctx.strokeStyle = 'rgba(123, 59, 255, 0.45)'
-  ctx.lineWidth = 4
-  rr(ctx, 4, 4, W - 8, H - 8, 12)
+  ctx.moveTo(0, tby)
+  ctx.lineTo(W, tby)
   ctx.stroke()
 
-  ctx.strokeStyle = 'rgba(0, 245, 212, 0.12)'
-  ctx.lineWidth = 1.5
-  for (let i = 0; i < 6; i++) {
-    const y = 30 + i * 50
-    ctx.beginPath()
-    ctx.moveTo(20, y)
-    ctx.lineTo(120 + i * 40, y)
-    ctx.lineTo(160 + i * 40, y + 25)
-    ctx.lineTo(W - 80, y + 25)
-    ctx.stroke()
-
-    ctx.fillStyle = 'rgba(0, 245, 212, 0.3)'
-    ctx.beginPath()
-    ctx.arc(160 + i * 40, y + 25, 3.5, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  ctx.font = `700 13px ${MONO}`
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'
-  ctx.textAlign = 'right'
-  ctx.textBaseline = 'bottom'
-  ctx.fillText('CYBERPUNK BATTLESTATION // ED. 2026', W - 24, H - 16)
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.font = `600 11px ${FONT}`
+  ctx.fillStyle = '#94a3b8'
+  ctx.fillText('  🪟  Display 2 // Extended Desktop', 12, tby + 19)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. MAIN COMPONENT: 3D CYBERPUNK BATTLESTATION DESK
+// 4. LAPTOP MACBOOK (GIỮA DƯỚI): NỐI DÀI HÌNH NỀN & BÀN PHÍM
+// ─────────────────────────────────────────────────────────────────────────────
+function drawLaptopScreen(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  drawMoonLandscape(ctx, W, H, 'laptop')
+
+  // macOS Dock ở đáy laptop
+  const dw = 180
+  const dh = 24
+  const dx = (W - dw) / 2
+  const dy = H - dh - 6
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+  rr(ctx, dx, dy, dw, dh, 12)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+  ctx.lineWidth = 1
+  rr(ctx, dx, dy, dw, dh, 12)
+  ctx.stroke()
+
+  const macIcons = ['🧭', '💬', '✉️', '🎵', '⚙️']
+  macIcons.forEach((ic, i) => {
+    ctx.font = '12px system-ui'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(ic, dx + 18 + i * 36, dy + dh / 2)
+  })
+}
+
+function drawLaptopKeyboard(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  // Mặt phím nhôm bạc MacBook
+  ctx.fillStyle = '#d1d5db'
+  ctx.fillRect(0, 0, W, H)
+
+  // Vùng bàn phím đen
+  ctx.fillStyle = '#111317'
+  rr(ctx, 30, 20, W - 60, H * 0.55, 6)
+  ctx.fill()
+
+  // Phím bấm chiclet đen
+  const rows = 5
+  const cols = 14
+  const kw = (W - 74) / cols
+  const kh = (H * 0.55 - 14) / rows
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      ctx.fillStyle = '#1c1f24'
+      rr(ctx, 35 + c * kw, 25 + r * kh, kw - 3, kh - 3, 2.5)
+      ctx.fill()
+    }
+  }
+
+  // Trackpad nhôm lớn chính giữa
+  ctx.fillStyle = '#e5e7eb'
+  rr(ctx, W / 2 - 70, H * 0.62, 140, H * 0.32, 6)
+  ctx.fill()
+  ctx.strokeStyle = '#9ca3af'
+  ctx.lineWidth = 1
+  rr(ctx, W / 2 - 70, H * 0.62, 140, H * 0.32, 6)
+  ctx.stroke()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. IPAD / TABLET BÊN PHẢI: TRANH CAMO POP-ART TÍM VÀ VÀNG (GIỐNG ẢNH 2)
+// ─────────────────────────────────────────────────────────────────────────────
+function drawTabletGraphic(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  // Nền tím chấm bi / Halftone Pop-art
+  ctx.fillStyle = '#4a2574'
+  ctx.fillRect(0, 0, W, H)
+
+  // Chấm bi pop-art
+  ctx.fillStyle = '#3c1c60'
+  for (let x = 6; x < W; x += 14) {
+    for (let y = 6; y < H; y += 14) {
+      ctx.beginPath()
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  // Mảng màu vàng hữu cơ (Camouflage / Pop-art blobs giống ảnh 2)
+  ctx.fillStyle = '#f5b027'
+  ctx.beginPath()
+  ctx.moveTo(0, H * 0.4)
+  ctx.bezierCurveTo(W * 0.2, H * 0.2, W * 0.4, H * 0.6, W * 0.65, H * 0.35)
+  ctx.bezierCurveTo(W * 0.85, H * 0.15, W * 0.95, H * 0.5, W, H * 0.4)
+  ctx.lineTo(W, H * 0.85)
+  ctx.bezierCurveTo(W * 0.7, H * 0.95, W * 0.5, H * 0.7, W * 0.3, H * 0.85)
+  ctx.bezierCurveTo(W * 0.1, H * 0.95, 0, H * 0.75, 0, H * 0.85)
+  ctx.closePath()
+  ctx.fill()
+
+  // Mảng màu cam đất phụ
+  ctx.fillStyle = '#d97706'
+  ctx.beginPath()
+  ctx.arc(W * 0.25, H * 0.3, 35, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(W * 0.82, H * 0.7, 45, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. THẢM CẮT / DESKMAT KẺ LƯỚI CARO XÁM (GIỐNG ẢNH 2)
+// ─────────────────────────────────────────────────────────────────────────────
+function drawGridDeskmat(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  // Nền thảm tối xám đen
+  ctx.fillStyle = '#1e232a'
+  ctx.fillRect(0, 0, W, H)
+
+  // Viền bo quanh thảm
+  ctx.strokeStyle = '#374151'
+  ctx.lineWidth = 4
+  rr(ctx, 4, 4, W - 8, H - 8, 10)
+  ctx.stroke()
+
+  // Lưới kẻ ô caro (Cutting mat grid giống ảnh 2)
+  ctx.strokeStyle = 'rgba(156, 163, 175, 0.2)'
+  ctx.lineWidth = 1
+  for (let x = 16; x < W - 16; x += 22) {
+    ctx.beginPath()
+    ctx.moveTo(x, 16)
+    ctx.lineTo(x, H - 16)
+    ctx.stroke()
+  }
+  for (let y = 16; y < H - 16; y += 22) {
+    ctx.beginPath()
+    ctx.moveTo(16, y)
+    ctx.lineTo(W - 16, y)
+    ctx.stroke()
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. MAIN 3D COMPONENT: BÀN LÀM VIỆC ANIME MINIMALIST (TÁI HIỆN CHÍNH XÁC ẢNH 2)
 // ─────────────────────────────────────────────────────────────────────────────
 export function Desk({
   position,
@@ -1002,386 +434,117 @@ export function Desk({
 }) {
   const glow = useMemo(() => glowTexture(), [])
 
-  // Canvas textures cho 3 màn hình + bàn phím + thảm
-  const desktop = useMemo(() => makeScreen(1024, 640), [])
-  const telemetry = useMemo(() => makeScreen(640, 640), [])
-  const snk = useMemo(() => makeScreen(800, 500), [])
-  const keys = useMemo(() => makeScreen(1024, 320), [])
-  const mat = useMemo(() => makeScreen(1024, 340), [])
+  // Canvas textures cho các màn hình và thiết bị
+  const mainScreen = useMemo(() => makeScreen(1024, 640), [])
+  const leftScreen = useMemo(() => makeScreen(960, 600), [])
+  const laptopScreen = useMemo(() => makeScreen(640, 400), [])
+  const laptopKeys = useMemo(() => makeScreen(640, 420), [])
+  const tabletScreen = useMemo(() => makeScreen(512, 360), [])
+  const deskmat = useMemo(() => makeScreen(1024, 420), [])
 
-  // State tương tác của hệ điều hành Desktop
-  const osState = useRef({
-    activeApp: 'vscode' as AppId,
-    openWindows: new Set<AppId>(['vscode', 'projects']),
-    activeTab: 'profile' as CodeTab,
-    startMenuOpen: false,
-    termCmd: 'neofetch',
-  })
-
-  const game = useRef<Game>(newGame())
-  const desktopHits = useRef<Hit[]>([])
-  const hover = useRef<string | null>(null)
-  const fan = useRef<THREE.Mesh[]>([])
-  const aioRing = useRef<THREE.Mesh>(null)
-  const strip = useRef<THREE.Mesh>(null)
-  const ambientHalo = useRef<THREE.Mesh>(null)
-  const frame = useRef(0)
+  const hitsRef = useRef<Hit[]>([])
+  const hoverRef = useRef<string | null>(null)
   const root = useRef<THREE.Group>(null)
 
-  // Khởi tạo Deskmat
+  // Khởi tạo các textures tĩnh một lần
   useEffect(() => {
-    const c = mat.canvas.getContext('2d')!
-    drawDeskmat(c, mat.w, mat.h)
-    mat.tex.needsUpdate = true
-  }, [mat])
+    let c = leftScreen.canvas.getContext('2d')!
+    drawLeftMonitor(c, leftScreen.w, leftScreen.h)
+    leftScreen.tex.needsUpdate = true
 
-  // Phím tắt điều khiển Snake & bàn phím
-  useEffect(() => {
-    if (!active) return
-    const onKey = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase()
-      const map: Record<string, V> = {
-        arrowup: { x: 0, y: -1 },
-        w: { x: 0, y: -1 },
-        arrowdown: { x: 0, y: 1 },
-        s: { x: 0, y: 1 },
-        arrowleft: { x: -1, y: 0 },
-        a: { x: -1, y: 0 },
-        arrowright: { x: 1, y: 0 },
-        d: { x: 1, y: 0 },
-      }
-      const d = map[k]
-      if (d) {
-        e.preventDefault()
-        e.stopPropagation()
-        const g = game.current
-        if (g.state !== 'play') {
-          const b = g.best
-          game.current = newGame(b)
-          game.current.state = 'play'
-        }
-        steer(game.current, d)
-      }
-      if (e.key === ' ' && game.current.state !== 'play') {
-        e.preventDefault()
-        const b = game.current.best
-        game.current = newGame(b)
-        game.current.state = 'play'
-      }
-    }
-    addEventListener('keydown', onKey, true)
-    return () => removeEventListener('keydown', onKey, true)
-  }, [active])
+    c = laptopScreen.canvas.getContext('2d')!
+    drawLaptopScreen(c, laptopScreen.w, laptopScreen.h)
+    laptopScreen.tex.needsUpdate = true
 
-  useFrame(({ clock }, dt) => {
-    const t = clock.elapsedTime
-    const g = game.current
-    if (g.state === 'play') {
-      g.acc += dt
-      const stepT = Math.max(0.065, 0.13 - g.score * 0.003)
-      while (g.acc > stepT && g.state === 'play') {
-        g.acc -= stepT
-        stepGame(g)
-      }
-    }
+    c = laptopKeys.canvas.getContext('2d')!
+    drawLaptopKeyboard(c, laptopKeys.w, laptopKeys.h)
+    laptopKeys.tex.needsUpdate = true
 
+    c = tabletScreen.canvas.getContext('2d')!
+    drawTabletGraphic(c, tabletScreen.w, tabletScreen.h)
+    tabletScreen.tex.needsUpdate = true
+
+    c = deskmat.canvas.getContext('2d')!
+    drawGridDeskmat(c, deskmat.w, deskmat.h)
+    deskmat.tex.needsUpdate = true
+  }, [leftScreen, laptopScreen, laptopKeys, tabletScreen, deskmat])
+
+  useFrame(() => {
     if (root.current) root.current.visible = active
     if (!active) return
 
-    frame.current++
-    if (frame.current % 2 === 0) {
-      // 1. Vẽ màn hình giữa (Cyber-OS)
-      let c = desktop.canvas.getContext('2d')!
-      desktopHits.current = drawDesktop(c, desktop.w, desktop.h, t, osState.current, hover.current)
-      desktop.tex.needsUpdate = true
-
-      // 2. Vẽ màn hình trái (Telemetry)
-      c = telemetry.canvas.getContext('2d')!
-      drawSystemDashboard(c, telemetry.w, telemetry.h, t)
-      telemetry.tex.needsUpdate = true
-
-      // 3. Vẽ màn hình phải (Snake Arcade)
-      c = snk.canvas.getContext('2d')!
-      drawSnake(c, snk.w, snk.h, g, t)
-      snk.tex.needsUpdate = true
-
-      // 4. Bàn phím cơ RGB
-      c = keys.canvas.getContext('2d')!
-      drawKeys(c, keys.w, keys.h, t)
-      keys.tex.needsUpdate = true
-    }
-
-    // Quạt tản nhiệt quay
-    fan.current.forEach((m, i) => {
-      if (!m) return
-      m.rotation.z = t * (2.8 + i * 0.5)
-      ;(m.material as THREE.MeshBasicMaterial).color
-        .setHSL((t * 0.15 + i * 0.12) % 1, 1, 0.55)
-        .multiplyScalar(live.neon + 0.3)
-    })
-
-    // Tản nhiệt AIO
-    if (aioRing.current) {
-      aioRing.current.rotation.z = -t * 3
-      ;(aioRing.current.material as THREE.MeshBasicMaterial).color
-        .setHSL((t * 0.25) % 1, 1, 0.6)
-        .multiplyScalar(live.neon + 0.4)
-    }
-
-    if (strip.current) {
-      ;(strip.current.material as THREE.MeshBasicMaterial).color
-        .setHSL((t * 0.2) % 1, 1, 0.55)
-        .multiplyScalar(live.neon + 0.3)
-    }
-
-    if (ambientHalo.current) {
-      ;(ambientHalo.current.material as THREE.MeshBasicMaterial).opacity =
-        (0.28 + 0.08 * Math.sin(t * 2)) * live.neon
-    }
+    // Cập nhật màn hình chính (Windows 11)
+    const c = mainScreen.canvas.getContext('2d')!
+    hitsRef.current = drawMainDesktop(c, mainScreen.w, mainScreen.h, hoverRef.current)
+    mainScreen.tex.needsUpdate = true
   })
 
   const uvToXY = (uv: THREE.Vector2 | undefined, w: number, h: number) =>
     uv ? { x: uv.x * w, y: (1 - uv.y) * h } : null
 
-  const chassisMetal = '#10121a'
-  const bezelMetal = '#08090e'
+  // Màu sắc vật liệu chuẩn thiết kế Studio / Anime Line-art trong ảnh 2
+  const deskWood = '#9aa1ab'
+  const wallGrey = '#cbcfd6'
+  const bezelDark = '#181b22'
+  const metallic = '#242831'
 
   return (
     <group ref={root} visible={false} position={position} rotation-y={yaw}>
-      {/* ─── TƯỜNG PHÒNG BATTLESTATION PHÍA SAU ─── */}
-      <mesh position={[0, 0.45, -0.42]} raycast={() => null}>
-        <planeGeometry args={[3.4, 1.8]} />
-        <meshBasicMaterial color="#07080f" toneMapped={false} />
+      {/* ─── TƯỜNG PHÒNG VÀ GẠCH ỐP STUDIO (SÁNG SỦA, GỌN GÀNG NHƯ ẢNH 2) ─── */}
+      <mesh position={[0, 0.46, -0.44]} raycast={() => null}>
+        <planeGeometry args={[3.8, 2.0]} />
+        <meshBasicMaterial color={wallGrey} toneMapped={false} />
       </mesh>
-
-      {/* Đèn Nanoleaf Neon hình lục giác treo tường */}
-      <group position={[0, 0.82, -0.41]} raycast={() => null}>
-        {[-0.6, -0.3, 0, 0.3, 0.6].map((x, i) => (
-          <mesh key={i} position={[x, i % 2 === 0 ? 0.08 : -0.04, 0]} rotation-z={(i * Math.PI) / 3}>
-            <ringGeometry args={[0.08, 0.095, 6]} />
-            <meshBasicMaterial color={i % 2 === 0 ? '#00f5d4' : '#ff007f'} toneMapped={false} />
-          </mesh>
-        ))}
-      </group>
-
-      {/* Vầng sáng Ambilight hắt tường sau màn hình */}
-      <mesh ref={ambientHalo} position={[0, 0.28, -0.38]} raycast={() => null}>
-        <planeGeometry args={[2.8, 1.4]} />
-        <meshBasicMaterial
-          map={glow}
-          color="#7b3bff"
-          transparent
-          opacity={0.3}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* Sàn phòng + Vệt sáng phản chiếu màu tím neon */}
-      <mesh position={[0, -0.399, 0.2]} rotation-x={-Math.PI / 2} raycast={() => null}>
-        <planeGeometry args={[2.8, 1.8]} />
-        <meshBasicMaterial
-          map={glow}
-          color="#ff007f"
-          transparent
-          opacity={0.25}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* ─── BÀN LÀM VIỆC CYBER GAMING ─── */}
-      <RoundedBox
-        args={[1.56, 0.036, 0.66]}
-        radius={0.012}
-        smoothness={2}
-        position={[0, -0.018, 0.12]}
-        raycast={() => null}
-      >
-        <meshBasicMaterial color="#131622" toneMapped={false} />
-      </RoundedBox>
-
-      {/* Dải LED RGB viền cạnh trước mặt bàn */}
-      <mesh position={[0, -0.035, 0.448]} raycast={() => null}>
-        <boxGeometry args={[1.56, 0.005, 0.005]} />
-        <meshBasicMaterial color="#00f5d4" toneMapped={false} />
-      </mesh>
-
-      {/* Chân bàn kim loại chữ K */}
-      {[-0.7, 0.7].map((x) => (
-        <group key={x} position={[x, -0.215, 0.12]}>
-          <mesh raycast={() => null}>
-            <boxGeometry args={[0.04, 0.38, 0.52]} />
-            <meshBasicMaterial color="#0a0c14" toneMapped={false} />
-          </mesh>
-          <mesh rotation-x={0.4} position={[0, 0, -0.08]} raycast={() => null}>
-            <boxGeometry args={[0.03, 0.36, 0.03]} />
-            <meshBasicMaterial color="#161a29" toneMapped={false} />
-          </mesh>
-        </group>
+      {/* Các đường chỉ nối tường (Panel lines) */}
+      {[-1.0, 0, 1.0].map((x) => (
+        <mesh key={x} position={[x, 0.46, -0.438]} raycast={() => null}>
+          <boxGeometry args={[0.005, 2.0, 0.002]} />
+          <meshBasicMaterial color="#a1a7b2" toneMapped={false} />
+        </mesh>
       ))}
 
-      {/* ─── THẢM CHUỘT CIRCUIT + BÀN PHÍM CƠ + CHUỘT GAMING ─── */}
-      <mesh position={[0, 0.001, 0.25]} rotation-x={-Math.PI / 2} raycast={() => null}>
-        <planeGeometry args={[1.05, 0.34]} />
-        <meshBasicMaterial map={mat.tex} toneMapped={false} />
+      {/* Sàn phòng màu xám nhạt */}
+      <mesh position={[0, -0.399, 0.2]} rotation-x={-Math.PI / 2} raycast={() => null}>
+        <planeGeometry args={[3.8, 2.0]} />
+        <meshBasicMaterial color="#b2b7c0" toneMapped={false} />
       </mesh>
 
-      {/* Bàn phím cơ RGB nghiêng góc công thái học */}
-      <group position={[-0.05, 0.012, 0.28]} rotation-x={-0.12}>
-        <RoundedBox args={[0.48, 0.016, 0.16]} radius={0.006} smoothness={2} raycast={() => null}>
-          <meshBasicMaterial color="#0a0c14" toneMapped={false} />
-        </RoundedBox>
-        <mesh position={[0, 0.009, 0]} rotation-x={-Math.PI / 2} raycast={() => null}>
-          <planeGeometry args={[0.46, 0.144]} />
-          <meshBasicMaterial map={keys.tex} toneMapped={false} />
-        </mesh>
-      </group>
+      {/* ─── BÀN LÀM VIỆC XÁM MINIMALIST (CÓ NGĂN KÉO PHẢI NHƯ ẢNH 2) ─── */}
+      {/* Mặt bàn gỗ bo cạnh */}
+      <RoundedBox args={[1.75, 0.038, 0.8]} radius={0.008} smoothness={2} position={[0, -0.019, 0.1]} raycast={() => null}>
+        <meshBasicMaterial color={deskWood} toneMapped={false} />
+      </RoundedBox>
 
-      {/* Chuột công thái học Gaming RGB */}
-      <group position={[0.34, 0.014, 0.28]}>
-        <RoundedBox args={[0.052, 0.02, 0.088]} radius={0.01} smoothness={3} raycast={() => null}>
-          <meshBasicMaterial color="#161926" toneMapped={false} />
-        </RoundedBox>
-        <mesh position={[0, 0.011, -0.022]} raycast={() => null}>
-          <boxGeometry args={[0.008, 0.008, 0.018]} />
-          <meshBasicMaterial color="#00f5d4" toneMapped={false} />
+      {/* Chân bàn hai bên */}
+      {[-0.78, 0.78].map((x) => (
+        <mesh key={x} position={[x, -0.21, 0.1]} raycast={() => null}>
+          <boxGeometry args={[0.04, 0.38, 0.72]} />
+          <meshBasicMaterial color="#888f9a" toneMapped={false} />
         </mesh>
-        <mesh ref={strip} position={[0, -0.008, 0]} raycast={() => null}>
-          <boxGeometry args={[0.054, 0.003, 0.09]} />
-          <meshBasicMaterial color="#ff007f" toneMapped={false} />
-        </mesh>
-      </group>
+      ))}
+      {/* Ngăn kéo dưới mặt bàn bên phải (giống ảnh 2) */}
+      <mesh position={[0.55, -0.07, 0.15]} raycast={() => null}>
+        <boxGeometry args={[0.38, 0.08, 0.65]} />
+        <meshBasicMaterial color="#808894" toneMapped={false} />
+      </mesh>
+      <mesh position={[0.55, -0.07, 0.476]} raycast={() => null}>
+        <boxGeometry args={[0.1, 0.012, 0.015]} />
+        <meshBasicMaterial color="#4b5563" toneMapped={false} />
+      </mesh>
 
-      {/* Giá treo tai nghe Gaming bên trái */}
-      <group position={[-0.64, 0.12, 0.32]}>
-        <mesh position={[0, -0.1, 0]} raycast={() => null}>
-          <cylinderGeometry args={[0.04, 0.045, 0.012, 16]} />
-          <meshBasicMaterial color="#0a0c14" toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 0.02, 0]} raycast={() => null}>
-          <cylinderGeometry args={[0.008, 0.008, 0.22, 12]} />
-          <meshBasicMaterial color="#161a29" toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 0.13, 0]} rotation-z={Math.PI / 2} raycast={() => null}>
-          <cylinderGeometry args={[0.012, 0.012, 0.07, 12]} />
-          <meshBasicMaterial color="#0a0c14" toneMapped={false} />
-        </mesh>
-        {[-0.035, 0.035].map((x) => (
-          <mesh key={x} position={[x, 0.09, 0]} rotation-y={Math.PI / 2} raycast={() => null}>
-            <torusGeometry args={[0.026, 0.008, 8, 24]} />
-            <meshBasicMaterial color="#00f5d4" toneMapped={false} />
-          </mesh>
-        ))}
-      </group>
+      {/* ─── THẢM CHUỘT / THẢM CẮT KẺ LƯỚI (CUTTING MAT TRÊN BÀN) ─── */}
+      <mesh position={[-0.04, 0.001, 0.22]} rotation-x={-Math.PI / 2} raycast={() => null}>
+        <planeGeometry args={[1.36, 0.52]} />
+        <meshBasicMaterial map={deskmat.tex} toneMapped={false} />
+      </mesh>
 
-      {/* ─── MÀN HÌNH CHÍNH (GIỮA): HỆ ĐIỀU HÀNH CYBER-OS THẬT ─── */}
-      <group position={[0, 0.26, -0.02]}>
-        <RoundedBox args={[0.76, 0.48, 0.026]} radius={0.01} smoothness={3} raycast={() => null}>
-          <meshBasicMaterial color={bezelMetal} toneMapped={false} />
+      {/* ─── MÀN HÌNH CHÍNH (GIỮA): TREO TRÊN TAY ARM, CÓ ĐÈN SCREENBAR ─── */}
+      <group position={[0.04, 0.36, -0.03]}>
+        {/* Khung màn hình */}
+        <RoundedBox args={[0.74, 0.46, 0.024]} radius={0.008} smoothness={3} raycast={() => null}>
+          <meshBasicMaterial color={bezelDark} toneMapped={false} />
         </RoundedBox>
-        {/* Mặt hiển thị Canvas Desktop OS */}
-        <mesh
-          position={[0, 0, 0.0135]}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (!active) {
-              onActivate()
-              return
-            }
-            const p = uvToXY(e.uv, desktop.w, desktop.h)
-            if (p) {
-              const hit = desktopHits.current.find(
-                (h) => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h
-              )
-              hit?.run()
-            }
-          }}
-          onPointerMove={(e) => {
-            e.stopPropagation()
-            let h: string | null = null
-            if (active) {
-              const p = uvToXY(e.uv, desktop.w, desktop.h)
-              if (p) {
-                h =
-                  desktopHits.current.find(
-                    (x) => p.x >= x.x && p.x <= x.x + x.w && p.y >= x.y && p.y <= x.y + x.h
-                  )?.id ?? null
-              }
-            }
-            hover.current = h
-            document.body.style.cursor = !active || h ? 'pointer' : 'default'
-          }}
-          onPointerOut={() => {
-            hover.current = null
-            document.body.style.cursor = ''
-          }}
-        >
-          <planeGeometry args={[0.73, 0.455]} />
-          <meshBasicMaterial map={desktop.tex} toneMapped={false} />
-        </mesh>
-        {/* Ambilight */}
-        <mesh position={[0, 0, -0.02]} raycast={() => null}>
-          <planeGeometry args={[0.82, 0.52]} />
-          <meshBasicMaterial
-            map={glow}
-            color="#7aa2f7"
-            transparent
-            opacity={0.35}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-            toneMapped={false}
-          />
-        </mesh>
-        {/* Chân đế */}
-        <mesh position={[0, -0.26, -0.02]} raycast={() => null}>
-          <boxGeometry args={[0.06, 0.08, 0.03]} />
-          <meshBasicMaterial color={chassisMetal} toneMapped={false} />
-        </mesh>
-        <mesh position={[0, -0.295, 0.02]} raycast={() => null}>
-          <boxGeometry args={[0.26, 0.009, 0.16]} />
-          <meshBasicMaterial color={chassisMetal} toneMapped={false} />
-        </mesh>
-      </group>
-
-      {/* ─── MÀN HÌNH TRÁI: HARDWARE GAUGES & REPO STATUS ─── */}
-      <group position={[-0.64, 0.24, 0.06]} rotation-y={0.46}>
-        <RoundedBox args={[0.48, 0.48, 0.024]} radius={0.01} smoothness={3} raycast={() => null}>
-          <meshBasicMaterial color={bezelMetal} toneMapped={false} />
-        </RoundedBox>
-        <mesh position={[0, 0, 0.0125]}>
-          <planeGeometry args={[0.45, 0.45]} />
-          <meshBasicMaterial map={telemetry.tex} toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 0, -0.02]} raycast={() => null}>
-          <planeGeometry args={[0.54, 0.54]} />
-          <meshBasicMaterial
-            map={glow}
-            color="#00f5d4"
-            transparent
-            opacity={0.35}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-            toneMapped={false}
-          />
-        </mesh>
-        <mesh position={[0, -0.26, -0.015]} raycast={() => null}>
-          <boxGeometry args={[0.05, 0.07, 0.025]} />
-          <meshBasicMaterial color={chassisMetal} toneMapped={false} />
-        </mesh>
-        <mesh position={[0, -0.29, 0.015]} raycast={() => null}>
-          <boxGeometry args={[0.18, 0.008, 0.12]} />
-          <meshBasicMaterial color={chassisMetal} toneMapped={false} />
-        </mesh>
-      </group>
-
-      {/* ─── MÀN HÌNH PHẢI: ARCADE GAME ─── */}
-      <group position={[0.64, 0.24, 0.06]} rotation-y={-0.46}>
-        <RoundedBox args={[0.52, 0.35, 0.024]} radius={0.01} smoothness={3} raycast={() => null}>
-          <meshBasicMaterial color={bezelMetal} toneMapped={false} />
-        </RoundedBox>
+        {/* Mặt kính hiển thị Windows 11 */}
         <mesh
           position={[0, 0, 0.0125]}
           onClick={(e) => {
@@ -1390,133 +553,223 @@ export function Desk({
               onActivate()
               return
             }
-            const g = game.current
-            if (g.state !== 'play') {
-              const b = g.best
-              game.current = newGame(b)
-              game.current.state = 'play'
-              return
+            const p = uvToXY(e.uv, mainScreen.w, mainScreen.h)
+            if (p) {
+              const hit = hitsRef.current.find((h) => p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h)
+              hit?.run()
             }
-            const p = uvToXY(e.uv, snk.w, snk.h)
-            if (!p) return
-            const ox = (snk.w - COLS * CELL) / 2
-            const oy = 52 + (snk.h - 52 - ROWS * CELL) / 2
-            const dx = (p.x - ox) / CELL - (g.snake[0].x + 0.5)
-            const dy = (p.y - oy) / CELL - (g.snake[0].y + 0.5)
-            steer(
-              g,
-              Math.abs(dx) > Math.abs(dy)
-                ? { x: Math.sign(dx) || 1, y: 0 }
-                : { x: 0, y: Math.sign(dy) || 1 }
-            )
           }}
           onPointerMove={(e) => {
             e.stopPropagation()
-            document.body.style.cursor = active ? 'pointer' : 'default'
+            let h: string | null = null
+            if (active) {
+              const p = uvToXY(e.uv, mainScreen.w, mainScreen.h)
+              if (p) {
+                h = hitsRef.current.find((x) => p.x >= x.x && p.x <= x.x + x.w && p.y >= x.y && p.y <= x.y + x.h)?.id ?? null
+              }
+            }
+            hoverRef.current = h
+            document.body.style.cursor = !active || h ? 'pointer' : 'default'
           }}
           onPointerOut={() => {
+            hoverRef.current = null
             document.body.style.cursor = ''
           }}
         >
-          <planeGeometry args={[0.49, 0.315]} />
-          <meshBasicMaterial map={snk.tex} toneMapped={false} />
+          <planeGeometry args={[0.71, 0.435]} />
+          <meshBasicMaterial map={mainScreen.tex} toneMapped={false} />
         </mesh>
-        <mesh position={[0, 0, -0.02]} raycast={() => null}>
-          <planeGeometry args={[0.58, 0.4]} />
-          <meshBasicMaterial
-            map={glow}
-            color="#00ff88"
-            transparent
-            opacity={0.35}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-            toneMapped={false}
-          />
+
+        {/* Chân trụ màn hình Arm gắn bàn */}
+        <mesh position={[0, -0.28, -0.03]} raycast={() => null}>
+          <cylinderGeometry args={[0.02, 0.02, 0.22, 16]} />
+          <meshBasicMaterial color={metallic} toneMapped={false} />
         </mesh>
-        <mesh position={[0, -0.205, -0.015]} raycast={() => null}>
-          <boxGeometry args={[0.05, 0.07, 0.025]} />
-          <meshBasicMaterial color={chassisMetal} toneMapped={false} />
+
+        {/* Đèn Screenbar (Treo trên đỉnh màn hình chính giống ảnh 2) */}
+        <mesh position={[0, 0.238, 0.025]} raycast={() => null}>
+          <boxGeometry args={[0.48, 0.014, 0.018]} />
+          <meshBasicMaterial color="#1f232b" toneMapped={false} />
         </mesh>
-        <mesh position={[0, -0.235, 0.015]} raycast={() => null}>
-          <boxGeometry args={[0.2, 0.008, 0.12]} />
-          <meshBasicMaterial color={chassisMetal} toneMapped={false} />
+        <mesh position={[0, 0.23, 0.022]} raycast={() => null}>
+          <boxGeometry args={[0.44, 0.003, 0.01]} />
+          <meshBasicMaterial color="#fffbeb" toneMapped={false} />
         </mesh>
       </group>
 
-      {/* ─── PC TOWER HIGH-END: BỂ CÁ LIQUID COOLING ─── */}
-      <group position={[1.02, -0.18, 0.14]} rotation-y={-0.3}>
-        <RoundedBox args={[0.24, 0.44, 0.42]} radius={0.012} smoothness={2} raycast={() => null}>
-          <meshBasicMaterial color="#090b12" toneMapped={false} />
+      {/* ─── MÀN HÌNH TRÁI: CÓ WEBCAM TRÊN ĐỈNH (GIỐNG ẢNH 2) ─── */}
+      <group position={[-0.66, 0.31, 0.08]} rotation-y={0.34}>
+        <RoundedBox args={[0.66, 0.42, 0.022]} radius={0.008} smoothness={3} raycast={() => null}>
+          <meshBasicMaterial color={bezelDark} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0, 0, 0.0115]}>
+          <planeGeometry args={[0.63, 0.395]} />
+          <meshBasicMaterial map={leftScreen.tex} toneMapped={false} />
+        </mesh>
+        <mesh position={[0, -0.24, -0.02]} raycast={() => null}>
+          <cylinderGeometry args={[0.018, 0.018, 0.18, 16]} />
+          <meshBasicMaterial color={metallic} toneMapped={false} />
+        </mesh>
+
+        {/* Webcam kẹp trên đỉnh màn hình trái (giống ảnh 2) */}
+        <group position={[0.18, 0.225, 0.01]} raycast={() => null}>
+          <RoundedBox args={[0.07, 0.026, 0.028]} radius={0.006} smoothness={2}>
+            <meshBasicMaterial color="#111318" toneMapped={false} />
+          </RoundedBox>
+          <mesh position={[0, 0, 0.015]}>
+            <circleGeometry args={[0.009, 16]} />
+            <meshBasicMaterial color="#38bdf8" toneMapped={false} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* ─── LAPTOP MACBOOK MỞ MÀN HÌNH ĐẶT NGAY DƯỚI MÀN HÌNH CHÍNH (GIỐNG ẢNH 2) ─── */}
+      <group position={[0.04, 0.008, 0.18]}>
+        {/* Phần thân dưới nhôm + bàn phím */}
+        <mesh position={[0, 0.004, 0.08]} rotation-x={-Math.PI / 2} raycast={() => null}>
+          <planeGeometry args={[0.34, 0.22]} />
+          <meshBasicMaterial map={laptopKeys.tex} toneMapped={false} />
+        </mesh>
+        <RoundedBox args={[0.344, 0.008, 0.224]} radius={0.004} smoothness={2} position={[0, 0.003, 0.08]} raycast={() => null}>
+          <meshBasicMaterial color="#d1d5db" toneMapped={false} />
         </RoundedBox>
 
-        <mesh position={[0, 0, 0.211]} raycast={() => null}>
-          <planeGeometry args={[0.21, 0.41]} />
-          <meshBasicMaterial color="#030408" toneMapped={false} />
-        </mesh>
-
-        {/* 3 Quạt RGB mặt trước */}
-        {[0.13, 0, -0.13].map((y, i) => (
-          <group key={i} position={[0, y, 0.212]} raycast={() => null}>
-            <mesh ref={(el) => { if (el) fan.current[i] = el }}>
-              <torusGeometry args={[0.046, 0.007, 8, 32]} />
-              <meshBasicMaterial color="#00f5d4" toneMapped={false} />
-            </mesh>
-            <mesh>
-              <circleGeometry args={[0.038, 6]} />
-              <meshBasicMaterial color="#ff007f" transparent opacity={0.4} toneMapped={false} />
-            </mesh>
-          </group>
-        ))}
-
-        {/* Kính cường lực bên hông */}
-        <mesh position={[0.121, 0, 0]} rotation-y={Math.PI / 2} raycast={() => null}>
-          <planeGeometry args={[0.38, 0.4]} />
-          <meshBasicMaterial color="#1a2035" transparent opacity={0.35} toneMapped={false} />
-        </mesh>
-
-        {/* GPU RTX 4090 */}
-        <mesh position={[0.02, -0.06, 0.02]} raycast={() => null}>
-          <boxGeometry args={[0.08, 0.03, 0.26]} />
-          <meshBasicMaterial color="#161b2b" toneMapped={false} />
-        </mesh>
-        <mesh position={[0.062, -0.06, 0.02]} raycast={() => null}>
-          <boxGeometry args={[0.003, 0.012, 0.24]} />
-          <meshBasicMaterial color="#00f5d4" toneMapped={false} />
-        </mesh>
-
-        {/* AIO Cooler CPU */}
-        <group position={[0.02, 0.06, -0.02]}>
-          <mesh ref={aioRing} raycast={() => null}>
-            <torusGeometry args={[0.025, 0.005, 8, 24]} />
-            <meshBasicMaterial color="#ff007f" toneMapped={false} />
+        {/* Màn hình laptop mở góc ~105 độ */}
+        <group position={[0, 0.008, -0.03]} rotation-x={0.24}>
+          <RoundedBox args={[0.34, 0.22, 0.006]} radius={0.004} smoothness={2} position={[0, 0.11, 0]} raycast={() => null}>
+            <meshBasicMaterial color="#1f232b" toneMapped={false} />
+          </RoundedBox>
+          <mesh position={[0, 0.11, 0.0035]}>
+            <planeGeometry args={[0.325, 0.205]} />
+            <meshBasicMaterial map={laptopScreen.tex} toneMapped={false} />
           </mesh>
-          <mesh position={[0, 0, 0.002]} raycast={() => null}>
-            <circleGeometry args={[0.019, 16]} />
-            <meshBasicMaterial color="#00f5d4" toneMapped={false} />
+        </group>
+      </group>
+
+      {/* ─── GỐI TỰA CỔ HÌNH CHỮ U (GIỐNG ẢNH 2) ─── */}
+      <group position={[-0.28, 0.08, 0.15]} rotation-y={0.25} rotation-z={-0.12} raycast={() => null}>
+        <mesh>
+          <torusGeometry args={[0.075, 0.032, 16, 28, Math.PI * 1.4]} />
+          <meshBasicMaterial color="#c2c7ce" toneMapped={false} />
+        </mesh>
+        {/* Đôi tai mèo trang trí trên gối giống ảnh 2 */}
+        {[-0.04, 0.04].map((tx) => (
+          <mesh key={tx} position={[tx, 0.08, 0]} rotation-z={tx < 0 ? 0.3 : -0.3}>
+            <coneGeometry args={[0.016, 0.03, 4]} />
+            <meshBasicMaterial color="#a9b0b8" toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* ─── BÀN PHÍM CƠ NẰM NGHIÊNG BÊN TRÁI (GIỐNG ẢNH 2) ─── */}
+      <group position={[-0.42, 0.02, 0.32]} rotation-y={0.16} rotation-x={-0.08} raycast={() => null}>
+        <RoundedBox args={[0.34, 0.024, 0.13]} radius={0.006} smoothness={2}>
+          <meshBasicMaterial color="#1e2329" toneMapped={false} />
+        </RoundedBox>
+        {/* Cụm keycaps đen xám */}
+        <mesh position={[0, 0.013, 0]}>
+          <boxGeometry args={[0.32, 0.008, 0.115]} />
+          <meshBasicMaterial color="#2d333b" toneMapped={false} />
+        </mesh>
+      </group>
+
+      {/* ─── LOA CUBE TRONG SUỐT CẠNH LAPTOP (GIỐNG ẢNH 2) ─── */}
+      <group position={[0.27, 0.05, 0.14]} rotation-y={-0.15} raycast={() => null}>
+        <RoundedBox args={[0.09, 0.09, 0.09]} radius={0.01} smoothness={2}>
+          <meshBasicMaterial color="#e5e7eb" transparent opacity={0.4} toneMapped={false} />
+        </RoundedBox>
+        {/* Nón loa màu vàng đồng bên trong */}
+        <mesh rotation-x={Math.PI / 2}>
+          <cylinderGeometry args={[0.032, 0.016, 0.06, 16]} />
+          <meshBasicMaterial color="#d97706" toneMapped={false} />
+        </mesh>
+      </group>
+
+      {/* ─── CHUỘT TRẮNG CÔNG THÁI HỌC (GIỐNG ẢNH 2) ─── */}
+      <group position={[0.32, 0.012, 0.28]} rotation-y={-0.12} raycast={() => null}>
+        <RoundedBox args={[0.052, 0.022, 0.085]} radius={0.012} smoothness={3}>
+          <meshBasicMaterial color="#f8fafc" toneMapped={false} />
+        </RoundedBox>
+      </group>
+
+      {/* ─── IPAD / TABLET BẬT TRANH CAMO POP-ART (GIỐNG ẢNH 2) ─── */}
+      <group position={[0.52, 0.08, 0.24]} rotation-y={-0.42} rotation-x={-0.34}>
+        <RoundedBox args={[0.32, 0.22, 0.01]} radius={0.008} smoothness={2} raycast={() => null}>
+          <meshBasicMaterial color="#1f242d" toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[0, 0, 0.0055]} raycast={() => null}>
+          <planeGeometry args={[0.305, 0.205]} />
+          <meshBasicMaterial map={tabletScreen.tex} toneMapped={false} />
+        </mesh>
+        {/* Chân chống tablet */}
+        <mesh position={[0, -0.06, -0.05]} rotation-x={0.6} raycast={() => null}>
+          <boxGeometry args={[0.15, 0.12, 0.006]} />
+          <meshBasicMaterial color="#374151" toneMapped={false} />
+        </mesh>
+      </group>
+
+      {/* ─── CASE MÁY TÍNH + CHỒNG SÁCH + ĐÈN BÓNG BẦU ĐIỆN VÀNG (GIỐNG ẢNH 2) ─── */}
+      <group position={[0.58, 0.18, -0.16]} rotation-y={-0.2}>
+        {/* Vỏ case PC đen sang trọng */}
+        <RoundedBox args={[0.26, 0.38, 0.42]} radius={0.01} smoothness={2} raycast={() => null}>
+          <meshBasicMaterial color="#181b22" toneMapped={false} />
+        </RoundedBox>
+        {/* Kính hông case trong suốt */}
+        <mesh position={[-0.131, 0, 0]} rotation-y={-Math.PI / 2} raycast={() => null}>
+          <planeGeometry args={[0.38, 0.34]} />
+          <meshBasicMaterial color="#2d3340" transparent opacity={0.3} toneMapped={false} />
+        </mesh>
+
+        {/* Chồng sách đặt trên nóc case (Cuốn xanh lá & cuốn xanh dương như ảnh 2) */}
+        <group position={[0.02, 0.21, -0.02]} raycast={() => null}>
+          {/* Cuốn sách xanh dương dưới */}
+          <mesh position={[0, 0.01, 0]}>
+            <boxGeometry args={[0.18, 0.02, 0.24]} />
+            <meshBasicMaterial color="#1e3a5f" toneMapped={false} />
+          </mesh>
+          {/* Cuốn sách xanh ngọc trên */}
+          <mesh position={[-0.01, 0.03, 0.01]}>
+            <boxGeometry args={[0.17, 0.018, 0.23]} />
+            <meshBasicMaterial color="#2dd4bf" toneMapped={false} />
           </mesh>
         </group>
 
-        {/* 2 Thanh RAM RGB */}
-        {[-0.01, 0.01].map((offset) => (
-          <mesh key={offset} position={[0.02 + offset, 0.07, 0.04]} raycast={() => null}>
-            <boxGeometry args={[0.005, 0.045, 0.01]} />
-            <meshBasicMaterial color="#ffd60a" toneMapped={false} />
+        {/* ĐÈN BÓNG TRÒN VINTAGE EDISON (PHÁT SÁNG VÀNG ẤM ÁP TRÊN NÓC CASE) */}
+        <group position={[0.01, 0.31, -0.02]}>
+          {/* Đế đèn gỗ tròn */}
+          <mesh position={[0, -0.035, 0]} raycast={() => null}>
+            <cylinderGeometry args={[0.045, 0.048, 0.02, 18]} />
+            <meshBasicMaterial color="#78350f" toneMapped={false} />
           </mesh>
-        ))}
-
-        {/* Vầng sáng nội thất buồng máy */}
-        <mesh position={[0.04, 0, 0]} rotation-y={Math.PI / 2} raycast={() => null}>
-          <planeGeometry args={[0.34, 0.36]} />
-          <meshBasicMaterial
-            map={glow}
-            color="#7b3bff"
-            transparent
-            opacity={0.45}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-            toneMapped={false}
-          />
-        </mesh>
+          {/* Đui đèn kim loại */}
+          <mesh position={[0, -0.015, 0]} raycast={() => null}>
+            <cylinderGeometry args={[0.022, 0.022, 0.024, 16]} />
+            <meshBasicMaterial color="#475569" toneMapped={false} />
+          </mesh>
+          {/* Bóng đèn thuỷ tinh hình bầu tròn */}
+          <mesh raycast={() => null}>
+            <sphereGeometry args={[0.048, 20, 20]} />
+            <meshBasicMaterial color="#fef08a" transparent opacity={0.85} toneMapped={false} />
+          </mesh>
+          {/* Tim đèn dây tóc Edison phát sáng */}
+          <mesh position={[0, 0, 0]} raycast={() => null}>
+            <cylinderGeometry args={[0.006, 0.006, 0.038, 8]} />
+            <meshBasicMaterial color="#f59e0b" toneMapped={false} />
+          </mesh>
+          {/* Vầng sáng vàng ấm tỏa ra từ bóng đèn */}
+          <mesh position={[0, 0, 0]} raycast={() => null}>
+            <planeGeometry args={[0.65, 0.65]} />
+            <meshBasicMaterial
+              map={glow}
+              color="#fef08a"
+              transparent
+              opacity={0.45}
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+              toneMapped={false}
+            />
+          </mesh>
+        </group>
       </group>
     </group>
   )
