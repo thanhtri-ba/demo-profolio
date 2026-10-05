@@ -97,6 +97,17 @@ export function Overlay(p: Props) {
     return () => clearInterval(timer)
   }, [])
 
+  // Trạng thái nguồn máy tính
+  const [pcPowerState, setPcPowerState] = useState<'off' | 'booting' | 'on'>('off')
+  useEffect(() => {
+    const onPowerChanged = (e: Event) => {
+      const ce = e as CustomEvent<{ state: 'off' | 'booting' | 'on' }>
+      if (ce.detail?.state) setPcPowerState(ce.detail.state)
+    }
+    window.addEventListener('neon-pc-power-changed', onPowerChanged)
+    return () => window.removeEventListener('neon-pc-power-changed', onPowerChanged)
+  }, [])
+
   // Apply Theme attribute to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -548,10 +559,25 @@ export function Overlay(p: Props) {
       {current?.kind === 'desk' && (
         <div className="cyber-banner-mode">
           <div className="banner-content">
-            <span className="banner-badge">DEV WORKSPACE</span>
-            <span className="banner-text">Màn hình trái: Dự án · Giữa: Code · Phải: Chơi game Snake (WASD / Phím mũi tên)</span>
+            <span className="banner-badge">STUDIO BATTLESTATION</span>
+            <span className="banner-text">
+              {pcPowerState === 'off'
+                ? 'Máy tính đang TẮT. Bấm nút nguồn trên Case hoặc nút bên phải để bật!'
+                : pcPowerState === 'booting'
+                ? 'Đang khởi động UEFI BIOS và nạp Windows 11...'
+                : 'Máy tính ĐÃ BẬT. Bấm các ứng dụng trên màn hình (This PC, Dự Án, VS Code...) để mở!'}
+            </span>
           </div>
-          <button className="cyber-btn highlight" onClick={p.onClose}>Thoát góc nhìn · ESC</button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              className={`cyber-btn ${pcPowerState === 'off' ? 'highlight' : ''}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('neon-pc-power-toggle'))}
+              title={pcPowerState === 'off' ? 'Bật máy tính' : 'Tắt máy tính'}
+            >
+              {pcPowerState === 'off' ? '⏻ Bật máy tính' : pcPowerState === 'booting' ? '⟳ Đang khởi động...' : '⏻ Tắt máy'}
+            </button>
+            <button className="cyber-btn" onClick={p.onClose}>Thoát góc nhìn · ESC</button>
+          </div>
         </div>
       )}
 

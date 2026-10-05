@@ -99,6 +99,97 @@ class Engine {
     src.connect(lp).connect(g).connect(this.master)
     src.start(); src.stop(ctx.currentTime + 3.3)
   }
+
+  pcPowerOn() {
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      if (!this.ctx && Ctx) this.ctx = new Ctx()
+      const ctx = this.ctx
+      if (!ctx) return
+      if (ctx.state === 'suspended') ctx.resume()
+      const now = ctx.currentTime
+
+      // 1. Công tắc cơ học click "tách"
+      const clickSrc = ctx.createBufferSource()
+      clickSrc.buffer = this.noise(ctx)
+      const clickF = ctx.createBiquadFilter()
+      clickF.type = 'bandpass'; clickF.frequency.value = 3500
+      const clickG = ctx.createGain()
+      clickG.gain.setValueAtTime(0.001, now)
+      clickG.gain.exponentialRampToValueAtTime(0.35, now + 0.005)
+      clickG.gain.exponentialRampToValueAtTime(0.001, now + 0.035)
+      clickSrc.connect(clickF).connect(clickG).connect(ctx.destination)
+      clickSrc.start(now); clickSrc.stop(now + 0.04)
+
+      // 2. Tiếng quạt tản nhiệt quay tăng tốc (Fan spin-up whoosh)
+      const fanSrc = ctx.createBufferSource()
+      fanSrc.buffer = this.noise(ctx)
+      const fanF = ctx.createBiquadFilter()
+      fanF.type = 'lowpass'
+      fanF.frequency.setValueAtTime(80, now + 0.05)
+      fanF.frequency.exponentialRampToValueAtTime(450, now + 1.2)
+      const fanG = ctx.createGain()
+      fanG.gain.setValueAtTime(0.001, now + 0.05)
+      fanG.gain.exponentialRampToValueAtTime(0.12, now + 0.5)
+      fanG.gain.exponentialRampToValueAtTime(0.02, now + 2.0)
+      fanSrc.connect(fanF).connect(fanG).connect(ctx.destination)
+      fanSrc.start(now + 0.05); fanSrc.stop(now + 2.2)
+
+      // 3. Tiếng Beep BIOS khởi động
+      const beep = ctx.createOscillator()
+      const beepG = ctx.createGain()
+      beep.type = 'sine'; beep.frequency.setValueAtTime(1046.5, now + 0.6)
+      beepG.gain.setValueAtTime(0.001, now + 0.6)
+      beepG.gain.exponentialRampToValueAtTime(0.15, now + 0.61)
+      beepG.gain.exponentialRampToValueAtTime(0.001, now + 0.72)
+      beep.connect(beepG).connect(ctx.destination)
+      beep.start(now + 0.6); beep.stop(now + 0.75)
+
+      // 4. Hợp âm khởi động Windows (Startup Chime chord)
+      const chord = [311.13, 466.16, 392.00, 523.25]
+      chord.forEach((freq, idx) => {
+        const osc = ctx.createOscillator()
+        const g = ctx.createGain()
+        osc.type = 'triangle'
+        const noteStart = now + 1.2 + idx * 0.14
+        osc.frequency.setValueAtTime(freq, noteStart)
+        g.gain.setValueAtTime(0.001, noteStart)
+        g.gain.exponentialRampToValueAtTime(0.18, noteStart + 0.02)
+        g.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.9)
+        osc.connect(g).connect(ctx.destination)
+        osc.start(noteStart); osc.stop(noteStart + 0.95)
+      })
+    } catch {}
+  }
+
+  pcPowerOff() {
+    try {
+      const ctx = this.ctx
+      if (!ctx) return
+      const now = ctx.currentTime
+
+      const clickSrc = ctx.createBufferSource()
+      clickSrc.buffer = this.noise(ctx)
+      const clickF = ctx.createBiquadFilter()
+      clickF.type = 'bandpass'; clickF.frequency.value = 2500
+      const clickG = ctx.createGain()
+      clickG.gain.setValueAtTime(0.001, now)
+      clickG.gain.exponentialRampToValueAtTime(0.3, now + 0.005)
+      clickG.gain.exponentialRampToValueAtTime(0.001, now + 0.03)
+      clickSrc.connect(clickF).connect(clickG).connect(ctx.destination)
+      clickSrc.start(now); clickSrc.stop(now + 0.035)
+
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(440, now + 0.05)
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.6)
+      g.gain.setValueAtTime(0.12, now + 0.05)
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.6)
+      osc.connect(g).connect(ctx.destination)
+      osc.start(now + 0.05); osc.stop(now + 0.65)
+    } catch {}
+  }
 }
 
 export const engine = new Engine()
