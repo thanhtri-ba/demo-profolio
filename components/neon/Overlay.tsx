@@ -499,6 +499,7 @@ export function Overlay(p: Props) {
                     >
                       {w === 'rain' && '🌧️ '}
                       {w === 'storm' && '⚡ '}
+                      {w === 'snow' && '❄️ '}
                       {w === 'fog' && '🌫️ '}
                       {w === 'clear' && '✨ '}
                       {WEATHER_LABELS[w]}

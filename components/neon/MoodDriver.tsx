@@ -35,6 +35,7 @@ export function MoodDriver({ time, weather, onThunder }: { time: TimeOfDay; weat
     live.stars += (t.stars - live.stars) * k
     live.vignette += (t.vignette - live.vignette) * k
     live.rain += (w.rain - live.rain) * k
+    live.snow += (w.snow - live.snow) * (1 - Math.exp(-dt * 0.8)) // tuyết phủ dần dần
     live.fog += (w.fog - live.fog) * k
     live.dim += (w.dim - live.dim) * k
 

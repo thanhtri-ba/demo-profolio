@@ -9,6 +9,7 @@ import { Street } from './Street'
 import { Signs } from './Signs'
 import { Rain } from './Rain'
 import { Dust } from './Dust'
+import { Snow } from './Snow'
 import { Sky } from './Sky'
 import { MoodDriver } from './MoodDriver'
 import { Drones } from './Drones'
@@ -54,7 +55,7 @@ export default function NeonStreet() {
   const [activeId, setActiveIdState] = useState<string | null>(null)
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>('default')
   const [time, setTime] = useState<TimeOfDay>('night')
-  const [weather, setWeather] = useState<Weather>('rain')
+  const [weather, setWeather] = useState<Weather>('snow')
   const [sound, setSound] = useState(false)
   const [quality, setQuality] = useState<'high' | 'low'>('high')
   const [forced, setForced] = useState(false)
@@ -153,6 +154,8 @@ export default function NeonStreet() {
             </>
           )}
           <Rain max={high ? 1 : 0.45} />
+          <Snow count={high ? 2200 : 800} size={0.024} />
+          {high && <Snow count={300} size={0.05} />}
         </Suspense>
         <CameraRig view={view} preset={cameraPreset} />
         <Effects quality={quality} />

@@ -5,6 +5,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { live } from '@/lib/mood'
 
+const snowUniform = { value: 0 }
+
 export const MODEL_URL = '/models/neon-street.glb' // 4096² WebP, ~1.06M tris, texture đã sharpen (~9MB)
 export const MODEL_LITE_URL = '/models/neon-street-lite.glb' // 2048², ~0.6M tris (~4.7MB) cho mobile / máy yếu
 
@@ -37,6 +39,29 @@ export function Street({ lite = false, reflect = true }: { lite?: boolean; refle
           toneMapped: false,
           side: isMirror ? THREE.DoubleSide : THREE.FrontSide,
         })
+        m.onBeforeCompile = (sh) => {
+          sh.uniforms.uSnow = snowUniform
+          sh.vertexShader = sh.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vSnowN;\nvarying vec3 vSnowP;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSnowN = normal;\nvSnowP = position;')
+          sh.fragmentShader = sh.fragmentShader
+            .replace('#include <common>', `#include <common>
+varying vec3 vSnowN;
+varying vec3 vSnowP;
+uniform float uSnow;
+float snHash(vec3 p){ p = fract(p * 0.3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float snNoise(vec3 x){ vec3 i = floor(x), f = fract(x); f = f*f*(3.0-2.0*f);
+  return mix(mix(mix(snHash(i), snHash(i+vec3(1,0,0)), f.x), mix(snHash(i+vec3(0,1,0)), snHash(i+vec3(1,1,0)), f.x), f.y),
+             mix(mix(snHash(i+vec3(0,0,1)), snHash(i+vec3(1,0,1)), f.x), mix(snHash(i+vec3(0,1,1)), snHash(i+vec3(1,1,1)), f.x), f.y), f.z); }`)
+            .replace('#include <map_fragment>', `#include <map_fragment>
+{
+  float up = normalize(vSnowN).y;
+  float n = snNoise(vSnowP * 90.0) * 0.6 + snNoise(vSnowP * 260.0) * 0.4;
+  float cover = smoothstep(0.55, 0.8, up + (n - 0.5) * 0.35) * uSnow;
+  vec3 snowCol = vec3(0.86, 0.92, 1.0) * (0.9 + 0.2 * n) * diffuse;
+  diffuseColor.rgb = mix(diffuseColor.rgb, snowCol, cover * 0.92);
+}`)
+        }
         mesh.material = m
         mats.current.push(m)
       })
@@ -47,6 +72,7 @@ export function Street({ lite = false, reflect = true }: { lite?: boolean; refle
   }, [scene, mirror, gl])
 
   useFrame(() => {
+    snowUniform.value = live.snow
     const f = live.flash * 0.7
     for (const m of mats.current) {
       m.color.copy(live.tint).multiplyScalar(live.dim)

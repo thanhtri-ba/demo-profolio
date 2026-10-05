@@ -6,10 +6,10 @@ import * as THREE from 'three'
  * các component khác (Sky, Street, Signs, Rain, Effects...) chỉ việc đọc.
  */
 export type TimeOfDay = 'night' | 'dusk' | 'day'
-export type Weather = 'clear' | 'rain' | 'fog' | 'storm'
+export type Weather = 'clear' | 'rain' | 'fog' | 'storm' | 'snow'
 
 export const TIME_LABELS: Record<TimeOfDay, string> = { night: 'Đêm', dusk: 'Hoàng hôn', day: 'Ngày' }
-export const WEATHER_LABELS: Record<Weather, string> = { clear: 'Quang', rain: 'Mưa', fog: 'Sương', storm: 'Bão' }
+export const WEATHER_LABELS: Record<Weather, string> = { clear: 'Quang', rain: 'Mưa', fog: 'Sương', storm: 'Bão', snow: 'Tuyết' }
 
 type TimePreset = {
   top: string          // màu đỉnh trời
@@ -28,12 +28,13 @@ export const TIME_PRESETS: Record<TimeOfDay, TimePreset> = {
   day: { top: '#4a90e2', bottom: '#dff1ff', tint: [1.85, 1.8, 1.75], neon: 0.4, bloom: 0.25, stars: 0, fog: '#b9d4ea', vignette: 0.22 },
 }
 
-type WeatherPreset = { rain: number; fog: number; lightning: boolean; dim: number }
+type WeatherPreset = { rain: number; snow: number; fog: number; lightning: boolean; dim: number }
 export const WEATHER_PRESETS: Record<Weather, WeatherPreset> = {
-  clear: { rain: 0, fog: 0, lightning: false, dim: 1 },
-  rain: { rain: 0.6, fog: 0.12, lightning: false, dim: 0.92 },
-  fog: { rain: 0, fog: 0.38, lightning: false, dim: 0.95 },
-  storm: { rain: 1, fog: 0.2, lightning: true, dim: 0.78 },
+  clear: { rain: 0, snow: 0, fog: 0, lightning: false, dim: 1 },
+  rain: { rain: 0.6, snow: 0, fog: 0.12, lightning: false, dim: 0.92 },
+  fog: { rain: 0, snow: 0, fog: 0.38, lightning: false, dim: 0.95 },
+  storm: { rain: 1, snow: 0, fog: 0.2, lightning: true, dim: 0.78 },
+  snow: { rain: 0, snow: 1, fog: 0.16, lightning: false, dim: 0.96 },
 }
 
 const n = TIME_PRESETS.night
@@ -48,6 +49,7 @@ export const live = {
   stars: n.stars,
   vignette: n.vignette,
   rain: WEATHER_PRESETS.rain.rain,
+  snow: 0, // 0..1: lượng tuyết rơi + độ phủ tuyết trên mái
   dim: WEATHER_PRESETS.rain.dim,
   flash: 0, // chớp sét 0..1
 }
