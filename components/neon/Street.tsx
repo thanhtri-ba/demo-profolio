@@ -35,8 +35,7 @@ export function Street({ lite = false, reflect = true }: { lite?: boolean; refle
         const m = new THREE.MeshBasicMaterial({
           map,
           toneMapped: false,
-          transparent: isMirror,
-          opacity: isMirror ? 0.85 : 1,
+          side: isMirror ? THREE.DoubleSide : THREE.FrontSide,
         })
         mesh.material = m
         mats.current.push(m)
@@ -63,11 +62,11 @@ export function Street({ lite = false, reflect = true }: { lite?: boolean; refle
     c.width = c.height = 512
     const x = c.getContext('2d')!
     const g = x.createRadialGradient(256, 256, 0, 256, 256, 256)
-    // Tâm đĩa trong suốt vừa phải để thấy rõ bóng phản chiếu của toà nhà và bảng neon
-    g.addColorStop(0, 'rgba(4, 7, 14, 0.38)')
-    g.addColorStop(0.35, 'rgba(4, 7, 14, 0.52)')
-    g.addColorStop(0.65, 'rgba(3, 5, 10, 0.76)')
-    g.addColorStop(0.85, 'rgba(2, 3, 7, 0.94)')
+    // Tâm đĩa trong suốt vừa phải để thấy rõ nét bóng phản chiếu của toà nhà và bảng neon
+    g.addColorStop(0, 'rgba(3, 5, 10, 0.28)')
+    g.addColorStop(0.35, 'rgba(3, 5, 10, 0.42)')
+    g.addColorStop(0.65, 'rgba(2, 4, 8, 0.72)')
+    g.addColorStop(0.85, 'rgba(1, 2, 4, 0.92)')
     g.addColorStop(1, 'rgba(0, 0, 0, 1.0)')
     x.fillStyle = g
     x.fillRect(0, 0, 512, 512)
@@ -80,22 +79,16 @@ export function Street({ lite = false, reflect = true }: { lite?: boolean; refle
       {/* ─── THÀNH PHỐ CHÍNH ─── */}
       <primitive object={scene} />
 
-      {/* ─── MẶT PHẲNG NỀN ĐƯỜNG NHỰA ĐEN BÓNG BÊN DƯỚI TOÀN BỘ PHỐ ─── */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.0006} renderOrder={0}>
-        <circleGeometry args={[2.5, 64]} />
-        <meshBasicMaterial color="#03050a" toneMapped={false} />
-      </mesh>
-
       {/* ─── BẢN SAO LẬT NGƯỢC TẠO BÓNG PHẢN CHIẾU MẶT NƯỚC ƯỚT ─── */}
       {mirror && (
-        <group scale={[1, -1, 1]}>
+        <group scale={[1, -1, 1]} position-y={-0.0004}>
           <primitive object={mirror} />
         </group>
       )}
 
       {/* ─── ĐĨA PHỦ MỜ DẦN MẶT ĐƯỜNG ƯỚT TẠO ĐỘ SÂU VÀ ĐỘ BÓNG NƯỚC ─── */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.0002} renderOrder={2}>
-        <circleGeometry args={[2.2, 64]} />
+      <mesh rotation-x={-Math.PI / 2} position-y={-0.0002} renderOrder={10}>
+        <circleGeometry args={[1.45, 64]} />
         <meshBasicMaterial map={floorTex} transparent depthWrite={false} toneMapped={false} />
       </mesh>
     </>
