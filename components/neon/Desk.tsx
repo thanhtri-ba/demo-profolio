@@ -33,6 +33,29 @@ function makeCanvasScreen(w: number, h: number) {
   return { canvas, tex, w, h }
 }
 
+function makePowerPromptTexture() {
+  const c = document.createElement('canvas')
+  c.width = 320
+  c.height = 80
+  const ctx = c.getContext('2d')!
+  ctx.fillStyle = 'rgba(2, 132, 199, 0.95)'
+  rr(ctx, 4, 4, 312, 72, 16)
+  ctx.fill()
+  ctx.strokeStyle = '#38bdf8'
+  ctx.lineWidth = 3
+  rr(ctx, 4, 4, 312, 72, 16)
+  ctx.stroke()
+
+  ctx.fillStyle = '#ffffff'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = '800 24px "Plus Jakarta Sans", system-ui'
+  ctx.fillText('⏻ BẬT MÁY TÍNH', 160, 40)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. THẢM CẮT KỸ THUẬT (CUTTING MAT / GRID DESKMAT) CHÂN THỰC
 // ─────────────────────────────────────────────────────────────────────────────
@@ -629,6 +652,7 @@ export function Desk({
   const laptopKeys = useMemo(() => makeCanvasScreen(640, 420), [])
   const mechKeyboard = useMemo(() => makeCanvasScreen(512, 220), [])
   const deskmat = useMemo(() => makeCanvasScreen(1024, 420), [])
+  const powerPromptTex = useMemo(() => makePowerPromptTexture(), [])
 
   // Trạng thái nguồn máy tính: 'off' | 'booting' | 'on'
   const [powerState, setPowerState] = useState<PCPowerState>('off')
@@ -966,16 +990,24 @@ export function Desk({
           <meshStandardMaterial color="#111827" roughness={0.3} metalness={0.5} />
         </RoundedBox>
 
-        {/* ─── CỤM NÚT NGUỒN CƠ HỌC BẬT MÁY TÍNH TƯƠNG TÁC TRÊN NÓC CASE ─── */}
-        <group position={[0.05, 0.191, 0.14]}>
-          {/* Vành kim loại bao quanh nút nguồn */}
-          <mesh>
-            <cylinderGeometry args={[0.016, 0.018, 0.004, 24]} />
-            <meshStandardMaterial color="#1e2430" metalness={0.8} roughness={0.2} />
+        {/* ─── CỤM NÚT NGUỒN CƠ HỌC BẬT MÁY TÍNH Ở MẶT TRƯỚC THÙNG CASE (CHÍNH DIỆN) ─── */}
+        <group position={[0, 0.125, 0.211]}>
+          {/* Tấm I/O kim loại phay xước mặt trước */}
+          <mesh position={[0, 0, 0.001]}>
+            <boxGeometry args={[0.22, 0.052, 0.002]} />
+            <meshStandardMaterial color="#161b24" metalness={0.8} roughness={0.3} />
           </mesh>
-          {/* Nút bấm vật lý (Ấn xuống khi bấm) */}
+
+          {/* Vành kim loại bao quanh nút nguồn */}
+          <mesh position={[0, 0, 0.002]} rotation-x={Math.PI / 2}>
+            <cylinderGeometry args={[0.024, 0.026, 0.005, 32]} />
+            <meshStandardMaterial color="#2d3748" metalness={0.9} roughness={0.2} />
+          </mesh>
+
+          {/* Nút bấm vật lý (Ấn thụt vào trong khi click) */}
           <mesh
-            position={[0, powerPressed ? 0.001 : 0.003, 0]}
+            position={[0, 0, powerPressed ? 0.002 : 0.005]}
+            rotation-x={Math.PI / 2}
             onClick={(e) => {
               e.stopPropagation()
               togglePower()
@@ -990,61 +1022,97 @@ export function Desk({
               document.body.style.cursor = ''
             }}
           >
-            <cylinderGeometry args={[0.012, 0.012, 0.005, 24]} />
+            <cylinderGeometry args={[0.019, 0.019, 0.006, 32]} />
             <meshStandardMaterial
               color={powerHovered ? '#38bdf8' : '#0f172a'}
-              metalness={0.7}
-              roughness={0.3}
+              metalness={0.8}
+              roughness={0.25}
             />
           </mesh>
 
-          {/* Vòng LED phát sáng quanh nút nguồn (Đổi màu theo trạng thái) */}
-          <mesh position={[0, 0.006, 0]}>
-            <torusGeometry args={[0.009, 0.0018, 12, 24]} />
+          {/* Vòng đèn LED phát sáng quanh nút nguồn */}
+          <mesh position={[0, 0, powerPressed ? 0.005 : 0.008]}>
+            <torusGeometry args={[0.015, 0.0024, 16, 32]} />
             <meshBasicMaterial
               color={
                 powerState === 'off'
-                  ? Math.sin(t * 3) > 0 ? '#f59e0b' : '#78350f'
+                  ? Math.sin(t * 3.5) > 0 ? '#f59e0b' : '#b45309'
                   : powerState === 'booting'
-                  ? Math.sin(t * 12) > 0 ? '#38bdf8' : '#0369a1'
+                  ? Math.sin(t * 14) > 0 ? '#38bdf8' : '#0284c7'
                   : '#22c55e'
               }
               toneMapped={false}
             />
           </mesh>
 
-          {/* Cổng cắm USB mặt trên */}
-          <mesh position={[-0.035, 0.002, 0]}>
-            <boxGeometry args={[0.012, 0.002, 0.006]} />
+          {/* Biểu tượng Power ⏻ phát sáng trên mặt nút */}
+          <group position={[0, 0, powerPressed ? 0.006 : 0.009]}>
+            {/* Vạch dọc phía trên */}
+            <mesh position={[0, 0.004, 0]}>
+              <boxGeometry args={[0.0024, 0.0065, 0.001]} />
+              <meshBasicMaterial
+                color={
+                  powerState === 'off' ? '#fbbf24' : powerState === 'booting' ? '#38bdf8' : '#4ade80'
+                }
+                toneMapped={false}
+              />
+            </mesh>
+            {/* Vòng tròn hở */}
+            <mesh position={[0, -0.0015, 0]} rotation-z={-Math.PI * 0.75}>
+              <torusGeometry args={[0.0065, 0.0013, 8, 24, Math.PI * 1.5]} />
+              <meshBasicMaterial
+                color={
+                  powerState === 'off' ? '#fbbf24' : powerState === 'booting' ? '#38bdf8' : '#4ade80'
+                }
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+
+          {/* Cổng USB 3.0 & Type-C & Jack Audio mặt trước */}
+          <mesh position={[-0.05, 0, 0.002]}>
+            <boxGeometry args={[0.014, 0.006, 0.002]} />
             <meshStandardMaterial color="#0284c7" />
           </mesh>
-          <mesh position={[-0.055, 0.002, 0]}>
-            <boxGeometry args={[0.012, 0.002, 0.006]} />
+          <mesh position={[-0.075, 0, 0.002]}>
+            <boxGeometry args={[0.014, 0.006, 0.002]} />
             <meshStandardMaterial color="#0284c7" />
+          </mesh>
+          <mesh position={[0.05, 0, 0.002]}>
+            <boxGeometry args={[0.01, 0.004, 0.002]} />
+            <meshStandardMaterial color="#475569" metalness={0.8} />
+          </mesh>
+          <mesh position={[0.075, 0, 0.002]} rotation-x={Math.PI / 2}>
+            <cylinderGeometry args={[0.004, 0.004, 0.002, 16]} />
+            <meshStandardMaterial color="#334155" metalness={0.9} />
+          </mesh>
+
+          {/* Dải LED RGB dọc ở giữa mặt trước thùng máy */}
+          <mesh position={[0, -0.16, 0.001]}>
+            <boxGeometry args={[0.004, 0.22, 0.002]} />
+            <meshBasicMaterial
+              color={powerState !== 'off' ? fanRgbColor : '#1e293b'}
+              toneMapped={false}
+            />
           </mesh>
 
           {/* Bảng hiệu chỉ dẫn Hologram bay lơ lửng khi máy đang TẮT */}
           {powerState === 'off' && (
-            <group position={[0, 0.08 + Math.sin(t * 4) * 0.006, 0]}>
-              <mesh
-                onClick={(e) => {
-                  e.stopPropagation()
-                  togglePower()
-                }}
-                onPointerOver={() => {
-                  document.body.style.cursor = 'pointer'
-                }}
-                onPointerOut={() => {
-                  document.body.style.cursor = ''
-                }}
-              >
-                <planeGeometry args={[0.22, 0.045]} />
-                <meshBasicMaterial color="#0284c7" transparent opacity={0.85} toneMapped={false} />
-              </mesh>
-              <mesh position={[0, 0, 0.002]}>
-                <planeGeometry args={[0.21, 0.04]} />
-                <meshBasicMaterial color="#0369a1" toneMapped={false} />
-              </mesh>
+            <group
+              position={[0, -0.065, 0.035 + Math.sin(t * 3.5) * 0.005]}
+              onClick={(e) => {
+                e.stopPropagation()
+                togglePower()
+              }}
+              onPointerOver={() => {
+                document.body.style.cursor = 'pointer'
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = ''
+              }}
+            >
+              <planeGeometry args={[0.18, 0.045]} />
+              <meshBasicMaterial map={powerPromptTex} transparent toneMapped={false} />
             </group>
           )}
         </group>
