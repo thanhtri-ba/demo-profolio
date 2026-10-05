@@ -137,7 +137,7 @@ export default function NeonStreet() {
         <Sky />
         <MoodDriver time={time} weather={weather} onThunder={() => engine.thunder()} />
         <Suspense fallback={null}>
-          {lite !== null && <Street lite={lite} reflect={high} />}
+          {lite !== null && <Street lite={lite} reflect={true} />}
           <Signs signs={SIGNS} activeId={activeId} onSelect={onSelect} />
           <MusicZone position={MUSIC_POS} onSelect={() => onSelect('music')} />
           <TVPlayer position={TV_POS} yaw={TV_YAW} active={activeId === 'music'} onActivate={() => onSelect('music')} />
