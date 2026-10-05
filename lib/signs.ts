@@ -152,8 +152,8 @@ export const SIGNS: Sign[] = [
   {
     id: 'desk', label: 'My Desk', kind: 'desk', nav: true,
     // bàn máy tính phong cách studio anime như ảnh mẫu 2
-    pos: [2.9, 0.46, -0.6], yaw: -1.0, size: [1.5, 0.6], glow: '#7b3bff',
-    view: { dist: 1.48, yawOffset: -0.14, lift: 0.44, shift: 0.05 },
+    pos: [2.9, 0.52, -0.6], yaw: -1.0, size: [1.5, 0.6], glow: '#7b3bff',
+    view: { dist: 2.15, yawOffset: 0, lift: 0.22, shift: 0 },
   },
   { id: 'youtube', label: 'YouTube', icon: 'youtube', glow: '#ff3b3b', pos: [-0.3628, 0.275, 0.4431], yaw: -0.83, size: [0.064, 0.045], href: 'https://youtube.com' },
   { id: 'linkedin', label: 'LinkedIn', icon: 'linkedin', glow: '#2fb8ff', pos: [-0.3593, 0.215, 0.4373], yaw: -0.83, size: [0.045, 0.045], href: P.linkedin },
