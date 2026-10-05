@@ -440,12 +440,6 @@ export function Desk({
   const mechKeyboard = useMemo(() => makeCanvasScreen(512, 220), [])
   const deskmat = useMemo(() => makeCanvasScreen(1024, 420), [])
 
-  // Texture của Tablet Pop-Art (dùng file mới để tránh cache trình duyệt)
-  const tabletTexture = useMemo(() => {
-    const t = new THREE.TextureLoader().load('/textures/tablet-popart.jpg')
-    t.colorSpace = THREE.SRGBColorSpace
-    return t
-  }, [])
 
   const wallImgRef = useRef<HTMLImageElement | null>(null)
   const hitsRef = useRef<Hit[]>([])
@@ -721,36 +715,6 @@ export function Desk({
         </mesh>
       </group>
 
-      {/* ─── IPAD / TABLET BẬT TRANH POP-ART VÀNG & TÍM (CHUẨN ẢNH 2 - ĐỨNG TRÊN MẶT BÀN) ─── */}
-      <group position={[0.52, 0.108, 0.24]} rotation-y={-0.42} rotation-x={-0.32}>
-        <RoundedBox args={[0.32, 0.22, 0.012]} radius={0.008} smoothness={2} raycast={() => null}>
-          <meshStandardMaterial color="#181c24" roughness={0.35} metalness={0.6} />
-        </RoundedBox>
-        {/* Màn hình hiển thị tranh pop-art */}
-        <mesh position={[0, 0, 0.0065]} raycast={() => null}>
-          <planeGeometry args={[0.306, 0.206]} />
-          <meshBasicMaterial map={tabletTexture} toneMapped={false} />
-        </mesh>
-        {/* Chân chống tablet đặt vững trên mặt bàn */}
-        <group position={[0, -0.01, -0.006]} rotation-x={0.76} raycast={() => null}>
-          <mesh position={[0, -0.065, 0]}>
-            <boxGeometry args={[0.16, 0.13, 0.006]} />
-            <meshStandardMaterial color="#2d3340" metalness={0.7} roughness={0.3} />
-          </mesh>
-          {/* Đệm cao su chân chống */}
-          <mesh position={[0, -0.13, 0]}>
-            <boxGeometry args={[0.16, 0.006, 0.008]} />
-            <meshStandardMaterial color="#0f1115" roughness={0.9} />
-          </mesh>
-        </group>
-        {/* Đệm cao su đáy tablet tiếp xúc thảm */}
-        {[-0.12, 0.12].map((bx) => (
-          <mesh key={bx} position={[bx, -0.11, 0]}>
-            <boxGeometry args={[0.04, 0.004, 0.012]} />
-            <meshStandardMaterial color="#0f1115" roughness={0.9} />
-          </mesh>
-        ))}
-      </group>
 
       {/* ─── CASE MÁY TÍNH + CHỒNG SÁCH + ĐÈN BÓNG BẦU ĐIỆN VÀNG (CHUẨN ẢNH 2) ─── */}
       <group position={[0.58, 0.18, -0.16]} rotation-y={-0.2}>
