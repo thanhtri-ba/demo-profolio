@@ -2,7 +2,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PerformanceMonitor } from '@react-three/drei'
-import { SIGNS, viewForSign } from '@/lib/signs'
+import { SIGNS, viewForSign, type CameraPreset } from '@/lib/signs'
 import { live, type TimeOfDay, type Weather } from '@/lib/mood'
 import { engine } from '@/lib/audio'
 import { Street } from './Street'
@@ -52,6 +52,7 @@ const NAV_IDS = SIGNS.filter((s) => s.nav).map((s) => s.id)
 
 export default function NeonStreet() {
   const [activeId, setActiveIdState] = useState<string | null>(null)
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>('default')
   const [time, setTime] = useState<TimeOfDay>('night')
   const [weather, setWeather] = useState<Weather>('rain')
   const [sound, setSound] = useState(false)
@@ -153,7 +154,7 @@ export default function NeonStreet() {
           )}
           <Rain max={high ? 1 : 0.45} />
         </Suspense>
-        <CameraRig view={view} />
+        <CameraRig view={view} preset={cameraPreset} />
         <Effects quality={quality} />
       </Canvas>
 
@@ -170,6 +171,8 @@ export default function NeonStreet() {
         toggleSound={toggleSound}
         quality={quality}
         setQuality={setQuality}
+        cameraPreset={cameraPreset}
+        setCameraPreset={setCameraPreset}
       />
     </div>
   )

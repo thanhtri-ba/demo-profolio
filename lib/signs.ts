@@ -147,23 +147,58 @@ export const SIGNS: Sign[] = [
     id: 'music', label: 'Music', kind: 'music', nav: true,
     // TV phát nhạc ở "góc mới" bên trái phố (xem TV_POS/TV_YAW trong NeonStreet)
     pos: [-1.2, 0.255, -0.25], yaw: 0.95, size: [0.5, 0.31], glow: '#ff3fd0',
-    view: { dist: 0.88, yawOffset: 0, lift: 0.005, shift: 0 },
+    view: { dist: 1.25, yawOffset: 0.18, lift: 0.05, shift: 0.1 },
   },
   {
     id: 'desk', label: 'My Desk', kind: 'desk', nav: true,
     // bàn máy tính ở góc đen bên phải phố (xem DESK_POS/DESK_YAW trong NeonStreet); PC mini trên đường là cổng vào
     pos: [2.9, 0.58, -0.6], yaw: -1.0, size: [1.5, 0.6], glow: '#7b3bff',
-    view: { dist: 1.9, yawOffset: 0, lift: 0.08, shift: 0 },
+    view: { dist: 2.1, yawOffset: 0, lift: 0.1, shift: 0 },
   },
   { id: 'youtube', label: 'YouTube', icon: 'youtube', glow: '#ff3b3b', pos: [-0.3628, 0.275, 0.4431], yaw: -0.83, size: [0.064, 0.045], href: 'https://youtube.com' },
   { id: 'linkedin', label: 'LinkedIn', icon: 'linkedin', glow: '#2fb8ff', pos: [-0.3593, 0.215, 0.4373], yaw: -0.83, size: [0.045, 0.045], href: P.linkedin },
   { id: 'github', label: 'GitHub', icon: 'github', glow: '#ffffff', pos: [-0.3557, 0.155, 0.4315], yaw: -0.83, size: [0.045, 0.045], href: P.github },
 ]
 
-/* ---------- Camera ---------- */
+/* ---------- Camera & Presets ---------- */
 export type View = { pos: Vec3; target: Vec3 }
 
-export const HOME_VIEW: View = { pos: [-1.25, 0.5, 1.25], target: [0, 0.3, 0] }
+export type CameraPreset = 'default' | 'wide' | 'isometric' | 'street' | 'top'
+
+export const CAMERA_PRESETS: Record<CameraPreset, { label: string; icon: string; desc: string; view: View }> = {
+  default: {
+    label: 'Toàn cảnh',
+    icon: '🏙️',
+    desc: 'Góc nhìn nghiêng chuẩn ban đầu',
+    view: { pos: [-1.25, 0.5, 1.25], target: [0, 0.3, 0] },
+  },
+  wide: {
+    label: 'Bao quát',
+    icon: '📐',
+    desc: 'Tự do lùi xa để thấy toàn bộ thành phố',
+    view: { pos: [-1.95, 0.9, 1.95], target: [0, 0.25, 0] },
+  },
+  isometric: {
+    label: 'Isometric',
+    icon: '🏛️',
+    desc: 'Góc nhìn 3D mô hình từ trên cao',
+    view: { pos: [-2.2, 1.65, 2.2], target: [0, 0.2, 0] },
+  },
+  street: {
+    label: 'Mặt đường',
+    icon: '🚶',
+    desc: 'Góc nhìn ngang người đi bộ dạo phố',
+    view: { pos: [-0.55, 0.15, 0.42], target: [0, 0.22, -0.1] },
+  },
+  top: {
+    label: 'Từ trên cao',
+    icon: '🛰️',
+    desc: 'Nhìn từ trên đỉnh các toà nhà xuống',
+    view: { pos: [0.01, 2.7, 0.01], target: [0, 0.2, 0] },
+  },
+}
+
+export const HOME_VIEW: View = CAMERA_PRESETS.default.view
 export const INTRO_VIEW: View = { pos: [-2.6, 1.3, 2.6], target: [0, 0.3, 0] }
 
 /** Camera đứng trước bảng, lệch nhẹ để chừa chỗ cho panel bên trái. */

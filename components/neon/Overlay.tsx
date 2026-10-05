@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useSyncExternalStore, useCallback, useRef, useMemo } from 'react'
 import { useProgress } from '@react-three/drei'
-import type { Sign } from '@/lib/signs'
+import { CAMERA_PRESETS, type Sign, type CameraPreset } from '@/lib/signs'
 import { music, TRACKS } from '@/lib/music'
 import { TIME_LABELS, WEATHER_LABELS, type TimeOfDay, type Weather } from '@/lib/mood'
 import { PROFILE } from '@/lib/profile'
@@ -19,6 +19,8 @@ type Props = {
   toggleSound: () => void
   quality: 'high' | 'low'
   setQuality: (q: 'high' | 'low') => void
+  cameraPreset: CameraPreset
+  setCameraPreset: (preset: CameraPreset) => void
 }
 
 type ThemeMode = 'cyber' | 'matrix' | 'amber' | 'synthwave'
@@ -142,17 +144,36 @@ export function Overlay(p: Props) {
     }
   }, [])
 
-  // Keyboard Shortcuts: Command+K for search, Esc to close, Arrows to navigate
+  // Keyboard Shortcuts: Command+K for search, + / - for Zoom, 0 for Auto-fit, 1-5 for Presets
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (t && /INPUT|TEXTAREA/.test(t.tagName)) return
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setCmdOpen((prev) => !prev)
+      } else if (e.key === '+' || e.key === '=') {
+        window.dispatchEvent(new CustomEvent('neon-camera-zoom-in'))
+      } else if (e.key === '-' || e.key === '_') {
+        window.dispatchEvent(new CustomEvent('neon-camera-zoom-out'))
+      } else if (e.key === '0' || e.key.toLowerCase() === 'f') {
+        window.dispatchEvent(new CustomEvent('neon-camera-fit'))
+      } else if (e.key === '1') {
+        p.setCameraPreset('default')
+      } else if (e.key === '2') {
+        p.setCameraPreset('wide')
+      } else if (e.key === '3') {
+        p.setCameraPreset('isometric')
+      } else if (e.key === '4') {
+        p.setCameraPreset('street')
+      } else if (e.key === '5') {
+        p.setCameraPreset('top')
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [p])
 
   const copyEmail = () => {
     navigator.clipboard.writeText(PROFILE.email)
@@ -379,6 +400,57 @@ export function Overlay(p: Props) {
                 </div>
               </div>
 
+              {/* Góc nhìn & Tỉ lệ thành phố */}
+              <div className="control-section">
+                <label className="control-label">
+                  <span>GÓC NHÌN & TỈ LỆ THÀNH PHỐ</span>
+                  <em>{CAMERA_PRESETS[p.cameraPreset]?.label}</em>
+                </label>
+                <div className="camera-preset-grid">
+                  {(Object.keys(CAMERA_PRESETS) as CameraPreset[]).map((key) => {
+                    const item = CAMERA_PRESETS[key]
+                    return (
+                      <button
+                        key={key}
+                        className={`preset-chip-btn ${p.cameraPreset === key && !p.activeId ? 'active' : ''}`}
+                        onClick={() => {
+                          if (p.activeId) p.onClose()
+                          p.setCameraPreset(key)
+                        }}
+                      >
+                        <span className="preset-icon">{item.icon}</span>
+                        <div className="preset-info">
+                          <strong>{item.label}</strong>
+                          <small>{item.desc}</small>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="camera-quick-actions">
+                  <button
+                    className="cyber-btn full-width"
+                    onClick={() => window.dispatchEvent(new CustomEvent('neon-camera-fit'))}
+                  >
+                    <span>⟲ Căn chỉnh toàn bộ thành phố vừa khung hình (Fit)</span>
+                  </button>
+                  <div className="zoom-btn-row">
+                    <button
+                      className="cyber-btn"
+                      onClick={() => window.dispatchEvent(new CustomEvent('neon-camera-zoom-out'))}
+                    >
+                      <span>－ Thu nhỏ (Zoom Out)</span>
+                    </button>
+                    <button
+                      className="cyber-btn"
+                      onClick={() => window.dispatchEvent(new CustomEvent('neon-camera-zoom-in'))}
+                    >
+                      <span>＋ Phóng to (Zoom In)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Thời gian */}
               <div className="control-section">
                 <label className="control-label">
@@ -393,7 +465,7 @@ export function Overlay(p: Props) {
                       onClick={() => p.setTime(t)}
                     >
                       {t === 'night' && '🌙 '}
-                      {t === 'sunset' && '🌇 '}
+                      {t === 'dusk' && '🌇 '}
                       {t === 'day' && '☀️ '}
                       {TIME_LABELS[t]}
                     </button>
@@ -717,11 +789,60 @@ export function Overlay(p: Props) {
       )}
 
 
+      {/* ─── FLOATING CAMERA & VIEWPORT DOCK ─── */}
+      {!loading && !p.activeId && (
+        <aside className="cyber-camera-dock" aria-label="Camera & Viewport Controls">
+          <div className="camera-dock-group">
+            <button
+              className="dock-icon-btn highlight"
+              onClick={() => window.dispatchEvent(new CustomEvent('neon-camera-fit'))}
+              title="Căn chỉnh toàn bộ thành phố vừa vặn màn hình (Phím tắt: 0 hoặc F)"
+            >
+              <span className="dock-icon">⟲</span>
+              <span className="dock-label">Vừa màn hình</span>
+            </button>
+            <div className="dock-divider" />
+            <button
+              className="dock-icon-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent('neon-camera-zoom-out'))}
+              title="Thu nhỏ góc nhìn (Phím tắt: -)"
+            >
+              <span className="dock-icon">－</span>
+            </button>
+            <button
+              className="dock-icon-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent('neon-camera-zoom-in'))}
+              title="Phóng to góc nhìn (Phím tắt: +)"
+            >
+              <span className="dock-icon">＋</span>
+            </button>
+            <div className="dock-divider" />
+            <div className="dock-presets">
+              {(Object.keys(CAMERA_PRESETS) as CameraPreset[]).map((key) => {
+                const item = CAMERA_PRESETS[key]
+                const active = p.cameraPreset === key
+                return (
+                  <button
+                    key={key}
+                    className={`dock-preset-chip ${active ? 'active' : ''}`}
+                    onClick={() => p.setCameraPreset(key)}
+                    title={`${item.label}: ${item.desc}`}
+                  >
+                    <span>{item.icon}</span>
+                    <span className="dock-chip-text">{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </aside>
+      )}
+
       {/* ─── INTERACTION HINT TOAST ─── */}
       {hint && !loading && !p.activeId && (
         <div className="cyber-hint-toast" aria-hidden="true">
           <span className="hint-pulse" />
-          <span>Kéo chuột để xoay camera · Cuộn để phóng to · Bấm vào biển hiệu đèn neon để tương tác</span>
+          <span>Kéo chuột để xoay · Cuộn để phóng to · Phím 0: Căn vừa màn hình · Phím 1-5: Đổi góc nhìn</span>
         </div>
       )}
     </>
